@@ -1,0 +1,12 @@
+[workspace]
+authors = ["Martin Garrido-Rodriguez <martin.garrido@uco.es>"]
+channels = ["conda-forge"]
+name = "cytokines-practical"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.15.2,<3.16"
+ipykernel = ">=7.4.0,<8"
