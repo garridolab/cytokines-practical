@@ -1,0 +1,62 @@
+# --- macOS ---
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Data files (heavy / intermediate) ---
+*.h5ad
+*.h5
+*.hdf5
+*.loom
+*.zarr/
+*.mtx
+*.mtx.gz
+*.rds
+*.RData
+*.pkl
+*.pickle
+*.parquet
+*.feather
+*.npy
+*.npz
+*.csv
+*.csv.gz
+*.tsv
+*.tsv.gz
+*.txt.gz
+*.gz
+*.zip
+*.tar
+*.tar.gz
+
+# Data / output directories
+data/
+results/
+outputs/
+figures/
+
+# --- Python / Jupyter ---
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+.env
+
+# --- Editors ---
+.vscode/
+.idea/
+# pixi environments
+.pixi/*
+!.pixi/config.toml
+
+# --- Slides: rendered output and images (never track) ---
+slides/**/*.png
+slides/**/*.pdf
+slides/**/*.jpg
+slides/**/*.jpeg
+slides/**/*.svg
