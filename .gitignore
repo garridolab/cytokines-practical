@@ -60,3 +60,6 @@ slides/**/*.pdf
 slides/**/*.jpg
 slides/**/*.jpeg
 slides/**/*.svg
+
+# --- Reference papers/figures (never track) ---
+refs/
