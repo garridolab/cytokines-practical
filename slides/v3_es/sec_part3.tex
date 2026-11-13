@@ -1,0 +1,315 @@
+% ════════════════════════════════════════════════════════════════════════════════════════
+\section{Parte 3: Análisis de Componentes Principales}
+
+\begin{frame}{Hoja de ruta de la Parte 3: un análisis para gobernarlos a todos (35 min)}
+  \footnotesize
+  \begin{columns}[T]
+    \begin{column}{0.54\linewidth}
+      \textbf{Diapositivas} (10 min)
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item ¿Por qué reducir la dimensionalidad?
+        \item El PCA como \alert{rotación}
+        \item \alert{SVD}: cómo se calcula
+        \item \alert{Proyección}: puntuaciones y cargas
+        \item El PCA en distintos campos
+      \end{itemize}
+      \vspace{0.1cm}
+      \textbf{Notebook} (25 min)
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item 3.1 PCA a mano con 2 genes
+        \item 3.2 PCA de todas las muestras
+        \item 3.3 cuatro coloreados: tipo celular, donante, citoquina, control vs tratado
+        \item 3.4 ¿qué significa cada PC? R$^2$ y cargas
+        \item 3.5 acercamiento a un tipo celular
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\linewidth}
+      \begin{block}{La pregunta}
+        Cada muestra se describe con $\sim$15\,500 números (uno por gen). \textbf{¿Qué impulsa la variación entre muestras?}
+      \end{block}
+      \begin{block}{La idea}
+        Encontrar unos pocos ejes nuevos que conserven la mayor variación posible y después \alert{colorear las muestras} para ver qué significan.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Por qué reducir la dimensionalidad?}
+  \begin{columns}[c]
+    \begin{column}{0.5\linewidth}\small
+      \begin{itemize}\setlength\itemsep{4pt}
+        \item \numnsamples\ muestras $\times$ \numngenes\ genes: imposible de mirar.
+        \item Muchos genes se mueven \alert{juntos} (la misma citoquina enciende todo un programa): los datos son más simples de lo que sugieren sus 15\,000 dimensiones.
+        \item El \textbf{PCA} busca unas pocas \alert{combinaciones de genes} que resuman esa variación compartida:
+        \begin{itemize}\footnotesize
+          \item \alert{lineal}: sumas ponderadas de genes
+          \item \alert{ordenado}: la PC1 tiene la mayor varianza, la PC2 la mayor de lo que queda, \ldots
+          \item \alert{no supervisado}: no sabe nada de citoquinas ni de donantes
+        \end{itemize}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}
+      \centering
+      \begin{tikzpicture}[font=\scriptsize]
+        % a 3D-ish object and its shadow
+        \draw[thick,fill=bluemid!15] (0,0) -- (1.6,0.3) -- (2.3,1.4) -- (0.7,1.1) -- cycle;
+        \draw[thick,fill=bluemid!30] (0.7,1.1) -- (2.3,1.4) -- (2.0,2.1) -- (0.5,1.8) -- cycle;
+        \node at (1.2,-0.35) {muchas dimensiones};
+        \draw[-{Stealth},very thick,accentred] (2.9,0.9) -- node[above] {proyectar} (4.2,0.9);
+        \draw[thick,fill=softgrey] (4.6,0.2) rectangle (6.6,1.7);
+        \foreach \x/\y in {4.9/0.5,5.2/1.2,5.5/0.7,5.8/1.4,6.1/0.9,6.3/0.4,5.0/0.95} \fill[bluemid] (\x,\y) circle (1.5pt);
+        \node at (5.6,-0.35) {2 dimensiones};
+      \end{tikzpicture}\\[4pt]
+      \footnotesize Una buena proyección conserva la \alert{estructura}: las muestras parecidas siguen cerca.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{El PCA es una rotación}
+  \begin{columns}[c]
+    \begin{column}{0.52\linewidth}
+      \centering
+      \begin{tikzpicture}[font=\scriptsize]
+        \pgfmathsetseed{11}
+        % original axes
+        \draw[-{Stealth},thick,greyink!70] (-3.1,0) -- (3.3,0) node[right] {gen A};
+        \draw[-{Stealth},thick,greyink!70] (0,-2.1) -- (0,2.3) node[above] {gen B};
+        \begin{scope}[rotate=35]
+          \foreach \i in {1,...,170} {
+            \pgfmathsetmacro{\px}{(rnd+rnd+rnd-1.5)*2.0}
+            \pgfmathsetmacro{\py}{(rnd+rnd+rnd-1.5)*0.7}
+            \fill[bluemid!75] (\px,\py) circle (1.4pt);
+          }
+          \draw[-{Stealth},very thick,accentred] (-2.6,0) -- (2.8,0) node[right,font=\footnotesize\bfseries] {PC1};
+          \draw[-{Stealth},very thick,accentred] (0,-1.3) -- (0,1.4) node[above,font=\footnotesize\bfseries] {PC2};
+        \end{scope}
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.46\linewidth}\small
+      \begin{enumerate}\setlength\itemsep{4pt}
+        \item \textbf{Centrar} cada gen (restarle su media): el origen se traslada al centro de la nube.
+        \item \textbf{Rotar} los ejes hasta que el primero apunte hacia donde la nube es más larga: esa es la \alert{PC1}. La PC2 es perpendicular, y así sucesivamente.
+        \item No se pierde nada: una rotación conserva todas las distancias entre muestras.
+      \end{enumerate}
+      \vspace{0.2cm}
+      \begin{block}{Reducción de dimensionalidad}
+        \footnotesize = quedarse solo con las primeras PCs y olvidar el resto.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Cómo se calcula? La SVD}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center}]
+    \node[draw=greyink,fill=softgrey,minimum width=1.7cm,minimum height=2.3cm] (X) at (0,0) {};
+    \node at (0,0) {\Large $X_c$};
+    \node at (1.15,0) {\Large $=$};
+    \node[draw=orangeslot,fill=orangeslot!15,minimum width=1.0cm,minimum height=2.3cm] (U) at (2.2,0) {};
+    \node at (2.2,0) {\Large $U$};
+    \node[draw=greyink,fill=greyink!20,minimum width=1.0cm,minimum height=1.0cm] (S) at (3.55,0.65) {};
+    \node at (3.55,0.65) {\Large $S$};
+    \draw[greyink] (3.1,1.1) -- (4.0,0.2);
+    \node[draw=bluemid,fill=bluemid!15,minimum width=1.7cm,minimum height=1.0cm] (V) at (5.3,0.65) {};
+    \node at (5.3,0.65) {\Large $V^{\!\top}$};
+    \node[text=greyink,below=0.1cm of X] {datos centrados\\ muestras $\times$ genes};
+    \node[text=orangeslot,below=0.1cm of U] {muestras\\ $\times$ PCs};
+    \node[text=greyink,below=0.7cm of S] {fuerza de\\ cada PC};
+    \node[text=bluemid,below=0.7cm of V] {PCs $\times$ genes\\ \alert{(cargas)}};
+  \end{tikzpicture}
+  \vspace{0.3cm}
+
+  \begin{columns}[T]
+    \begin{column}{0.5\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item $V$ es una \alert{rotación}: sus columnas son los nuevos ejes (longitud unidad, perpendiculares): los pesos de cada gen en cada PC.
+        \item $S$: cuánto se estiran los datos a lo largo de cada eje.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item \textbf{Varianza explicada} por la PC $k$: $\;s_k^2\big/\sum_j s_j^2$
+        \item En Python: \code{np.linalg.svd(Xc)}; el PCA de \code{scikit-learn} hace exactamente esto.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Proyección: puntuaciones y cargas}
+  \centering
+  \figfit[0.5]{p3_twogenes}
+  \vspace{0.05cm}
+  \begin{columns}[T]
+    \begin{column}{0.5\linewidth}\small
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item Monocitos, dos genes (\gene{ISG15}, \gene{MX1}).
+        \item Las \alert{puntuaciones} (scores), es decir, las coordenadas de las muestras en los nuevos ejes, son su \textbf{proyección}: $T=X_c\,V=U\,S$
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}\small
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item Las dos cargas de la PC1 son positivas: PC1 $=$ ``nivel global de genes de interferón''.
+        \item Solo la PC1 acumula el \alert{98\,\%} de la varianza.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{El PCA en la práctica}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center},
+      stp/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=1.15cm,minimum width=2.15cm,inner sep=2pt}]
+    \node[stp] (a) {datos normalizados\\ $\log_2$(CPM+1)};
+    \node[stp,right=0.3cm of a] (b) {quedarse con los\\ \textbf{2\,000 genes más}\\ \textbf{variables}};
+    \node[stp,right=0.3cm of b] (c) {centrar\\ los genes};
+    \node[stp,right=0.3cm of c] (d) {\textbf{SVD}};
+    \node[stp,right=0.3cm of d,fill=accentred!10,draw=accentred] (e) {puntuaciones, cargas,\\ varianza explicada};
+    \foreach \x/\y in {a/b,b/c,c/d,d/e} \draw[-{Stealth},thick] (\x) -- (\y);
+  \end{tikzpicture}
+  \vspace{0.25cm}
+
+\begin{lstlisting}
+Mc = M - M.mean(axis=0)                          # 1) centrar los genes
+U, S, Vt = np.linalg.svd(Mc, full_matrices=False)   # 2) SVD
+scores   = U * S                                 # 3) proyeccion: muestras en las PCs
+loadings = Vt.T                                  #    pesos de los genes
+var_pct  = S**2 / (S**2).sum() * 100             #    % de varianza de cada PC
+\end{lstlisting}
+  \vspace{0.1cm}
+  \small
+  Después \alert{coloreamos las muestras} según los metadatos para averiguar qué significa cada PC.
+\end{frame}
+
+\begin{frame}{El PCA en distintos campos}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize,
+      card/.style={draw=ucoblue!50,rounded corners,fill=ucoblue!5,text width=3.95cm,inner sep=4pt,align=left,minimum height=2.15cm,anchor=north west}]
+    \node[card] at (0,0)      {\textbf{\normalsize Genética de poblaciones}\\[2pt] Genotipos de miles de personas: PC1 y PC2 redibujan el mapa de la ascendencia y corrigen la estructura poblacional en estudios de asociación.};
+    \node[card] at (4.2,0)    {\textbf{\normalsize Célula única}\\[2pt] Normalizar, genes variables, PCA: las primeras 30--50 PCs alimentan el grafo de vecinos, el clustering y el UMAP.};
+    \node[card] at (8.4,0)    {\textbf{\normalsize QC de RNA-seq bulk}\\[2pt] Colorear por lote, condición o profundidad: aparecen atípicos, cambios de muestra y efectos de lote antes de cualquier prueba.};
+    \node[card] at (0,-2.45)  {\textbf{\normalsize Otras ómicas}\\[2pt] Proteómica, metabolómica, microbioma: cientos de variables correlacionadas en pocos ejes; las cargas dicen cuáles los impulsan.};
+    \node[card] at (4.2,-2.45) {\textbf{\normalsize Imágenes y señales}\\[2pt] ``Eigenfaces'', compresión de imágenes o espectros: se conservan unas pocas PCs.};
+    \node[card] at (8.4,-2.45) {\textbf{\normalsize Cualquier tabla ancha}\\[2pt] Sensores, química, finanzas, encuestas\ldots{} si muchas variables se mueven juntas.};
+  \end{tikzpicture}
+  \vspace{0.1cm}
+
+  \small En todos ellos el PCA responde a la misma pregunta: \alert{¿cuáles son las principales fuentes de variación de mis datos?}
+\end{frame}
+
+\begin{frame}{Leer un PCA: primero colorear, después interpretar}
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}
+      \begin{block}{Cómo averiguar qué significa una PC}
+        \small
+        \begin{enumerate}\setlength\itemsep{3pt}
+          \item \textbf{Colorea} las muestras según cada metadato.
+          \item Calcula la \textbf{R$^2$} de cada PC con cada variable.
+          \item Lee las \textbf{cargas}: ¿qué genes definen el eje?
+        \end{enumerate}
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\linewidth}
+      \begin{block}{Qué puede salir mal}
+        \footnotesize
+        \begin{itemize}\setlength\itemsep{2pt}
+          \item El PCA encuentra la variación \alert{mayor}, no la interesante.
+          \item Las variables técnicas (profundidad, lote) pueden dominar: normaliza antes.
+          \item Una PC puede mezclar varias cosas (un eje de citoquina y un eje de sexo en una misma PC).
+          \item El signo de una PC es arbitrario. Las PCs no son clusters.
+          \item Es exploratorio: no se contrasta nada.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Todas las muestras: domina el tipo celular}
+  \centering
+  \figfit[0.62]{p3_all_ct_donor}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \textbf{PC1} (\numpcaone\,\%): monocitos frente a linfocitos. \textbf{PC2} (\numpcatwo\,\%): células NK frente a linfocitos T.
+    \item Dentro de cada grupo de tipo celular los \alert{donantes están mezclados}: los efectos del donante aparecen en PCs posteriores.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Todas las muestras: citoquinas y control vs tratado}
+  \centering
+  \figfit[0.62]{p3_all_cyt_trt}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item Los controles PBS (negro) están \alert{dentro} de la nube de muestras tratadas. Unas pocas citoquinas (IL-4) empiezan a salir de ella.
+    \item Los efectos de las citoquinas son reales pero \alert{pequeños frente a las diferencias entre tipos celulares}. ¿Significa eso que no hacen nada?
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{¿Qué captura cada PC?}
+  \centering
+  \figfit[0.52]{p3_r2}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item PC1, PC2, PC4: \alert{tipo celular}. PC3, PC5, PC6, PC8: \alert{donante}.
+    \item La primera PC con señal de citoquina es la PC3 (R$^2$ 0.13): una PC de baja varianza. Las cuatro primeras PCs acumulan el \numpcafirstfour\,\% de la varianza.
+    \item La PC2 se correlaciona con el tamaño de librería solo porque las células NK tienen librerías más pequeñas: es el tipo celular disfrazado.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{¿Qué genes definen una PC? Las cargas}
+  \centering
+  \figfit[0.5]{p3_loadings}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \textbf{PC1}: genes de monocitos frente a genes de linfocitos. \textbf{PC2}: genes NK (\gene{GNLY}, \gene{NCAM1}) frente a genes de T vírgenes (\gene{CCR7}, \gene{LEF1}).
+    \item La \textbf{PC3} mezcla la \alert{respuesta a interferón} (\gene{IFIT1/2/3}, \gene{ISG15}) con \alert{genes del cromosoma Y} (\gene{UTY}, \gene{USP9Y}): un eje de citoquina y un eje de sexo en una misma PC.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Acercamiento: solo monocitos}
+  \centering
+  \figfit[0.62]{p3_mono_donor_cyt}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item Los \alert{donantes} forman grupos claros: las diferencias basales entre personas son grandes. El Donor 2 queda aparte (como en el artículo).
+    \item Las citoquinas aún no se separan. Por eso la Parte 4 compara cada citoquina con el PBS del \alert{mismo donante}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{En el artículo: los donantes difieren antes de cualquier tratamiento}
+  \centering
+  \includegraphics[width=0.95\linewidth,height=0.52\textheight,keepaspectratio]{paper_fig2_donors.png}\\[-1pt]
+  {\tiny Oesinghaus \emph{et al.}\ 2025, Fig.\ 2a--g (CC BY-NC-ND 4.0)}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item Un grupo de donantes (D1, D3, D4, D10) tiene una \alert{firma basal alta de interferón} en PBS (paneles d, e): el ``grupo de interferón'' del artículo; los monocitos del Donor 2 también quedan aparte (Fig.\ 2k), como en nuestro PCA.
+    \item Estas diferencias basales son la razón por la que comparamos cada citoquina con el PBS del \alert{mismo donante}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Monocitos: las PCs posteriores muestran las citoquinas}
+  \centering
+  \figfit[0.64]{p3_mono_pc34}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \textbf{IL-4} sale de la nube hacia valores bajos de PC4, cuyo extremo negativo contiene genes diana de IL-4 (\gene{ALOX15}, \gene{WNT5B}, \gene{FN1}); \textbf{GM-CSF} va hacia valores altos de PC3.
+    \item Cada citoquina mueve las muestras en su \alert{propia dirección}, mezclada con los efectos del donante.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Tu turno en el notebook (Parte 3)}
+  \small
+  Las celdas que empiezan por \code{\# CAMBIA ESTO} contienen parámetros que puedes modificar. Cámbialos, vuelve a ejecutar y mira qué pasa:
+  \vspace{0.2cm}
+
+  \begin{tabular}{@{}>{\ttfamily}p{0.25\linewidth}>{\raggedright\arraybackslash}p{0.7\linewidth}@{}}
+    \toprule
+    \textrm{\textbf{Parámetro}} & \textbf{Prueba\ldots}\\\midrule
+    N\_HVG & $200$ y $10\,000$ genes: ¿cuán robusta es la imagen?\\[2pt]
+    CYTOKINES\_PANEL & seis citoquinas de la familia de los interferones: ¿cuáles se agrupan?\\[2pt]
+    PCA\_CELL\_TYPE & otro tipo celular: ¿el efecto de la citoquina es parecido?\\[2pt]
+    COLOR\_BY, PCS & un gen (\gene{UTY}, \gene{STAT1}, \gene{IL1B}), el tamaño de librería, otras PCs (PC3 vs PC4)\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{La Parte 3 en una diapositiva}
+  \begin{itemize}\setlength\itemsep{7pt}
+    \item El PCA es una \alert{rotación} de los datos hacia ejes de varianza decreciente, calculada con la \alert{SVD}: \textbf{puntuaciones} = proyección de las muestras, \textbf{cargas} = pesos de los genes.
+    \item Es \alert{no supervisado}: colorear por metadatos, la R$^2$ y las cargas dicen qué significa cada PC.
+    \item La \alert{normalización} (Parte 2) decide lo que ve el PCA: sin ella, la PC1 sería la profundidad de secuenciación.
+    \item La variación más fuerte es el \alert{tipo celular}; después vienen los efectos del donante; los efectos de las citoquinas son reales pero pequeños y están \alert{mezclados con los del donante}.
+    \item $\Rightarrow$ siguiente paso: plantear la pregunta gen a gen, emparejando por donante.
+  \end{itemize}
+\end{frame}

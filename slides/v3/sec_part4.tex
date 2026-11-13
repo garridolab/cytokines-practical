@@ -1,0 +1,218 @@
+% ════════════════════════════════════════════════════════════════════════════════════════
+\section{Part 4: Differential expression}
+
+\begin{frame}{Differential expression: the question and the pipeline}
+  \centering
+  \textit{For gene $g$: is the expression with the cytokine different from the expression with PBS, more than expected by chance?}\\[0.45cm]
+  \begin{tikzpicture}[font=\small, every node/.style={align=center},
+      box/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=1.1cm,minimum width=2.9cm}]
+    \node[box] (a) {paired design\\ same donor, PBS vs cytokine};
+    \node[box,right=0.45cm of a] (b) {\textbf{DESeq2}\\ raw counts $\Rightarrow$ $p$-value};
+    \node[box,right=0.45cm of b] (c) {multiple testing\\ Benjamini--Hochberg};
+    \node[box,right=0.45cm of c,fill=accentred!10,draw=accentred] (d) {thresholds\\ $\Rightarrow$ DEGs};
+    \draw[-{Stealth},thick] (a) -- (b); \draw[-{Stealth},thick] (b) -- (c); \draw[-{Stealth},thick] (c) -- (d);
+    \node[font=\scriptsize,text=greyink,below=0.12cm of a] {4.1};
+    \node[font=\scriptsize,text=greyink,below=0.12cm of b] {4.2};
+    \node[font=\scriptsize,text=greyink,below=0.12cm of c] {4.3};
+    \node[font=\scriptsize,text=greyink,below=0.12cm of d] {4.4};
+  \end{tikzpicture}
+  \vspace{0.4cm}
+
+  \begin{block}{Predict}
+    In CD14 monocytes treated with \IFNg: more genes \textbf{up} or \textbf{down}? Tens, hundreds, thousands?
+  \end{block}
+\end{frame}
+
+\begin{frame}{4.1 Paired design: every donor against itself}
+  Each donor was measured with PBS \emph{and} with every cytokine; $y=\log_2(\text{CPM}+1)$:
+  \[ d_{gi}=y^{\text{cytokine}}_{gi}-y^{\text{PBS}}_{gi}\qquad(g=\text{gene},\ i=1,\dots,12\ \text{donors}),\qquad \lfc_g=\bar d_g=\tfrac1{12}\textstyle\sum_i d_{gi} \]
+  \begin{columns}[c]
+    \begin{column}{0.55\linewidth}
+      \figfit[0.52]{p4_paired}
+    \end{column}
+    \begin{column}{0.43\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item Each line = one donor (red: higher with the cytokine).
+        \item \gene{CXCL9}: every donor goes up, from different baselines. $\bar d=\numlfcobs$ ($\times\numfoldobs$).
+        \item \gene{ACTB}: lines go both ways, no consistent change.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.1 The paired $t$-test, by hand}
+  \begin{columns}[c]
+    \begin{column}{0.48\linewidth}
+      \[
+        s_g=\sqrt{\tfrac1{n-1}\textstyle\sum_i(d_{gi}-\bar d_g)^2},\qquad
+        t_g=\frac{\bar d_g}{s_g/\sqrt n}
+      \]
+      \[ p_g=2\,\Pr\bigl(T_{n-1}>|t_g|\bigr),\qquad n=12 \]
+      \small
+      \gene{CXCL9}, monocytes, \IFNg:
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item $\bar d=\numlfcobs$, \quad $t=\numtobs$, \quad df $=11$
+        \item $p=\numpobs$
+      \end{itemize}
+      Under H$_0$ (no effect) $t_g\sim t_{n-1}$. The $p$-value is the probability of a $|t|$ at least this large \emph{by chance}.
+    \end{column}
+    \begin{column}{0.5\linewidth}
+      \figfit[0.6]{p4_tdist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.2 DESeq2: how does it work?}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center},
+      stp/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=2.0cm,minimum width=2.95cm,inner sep=3pt,text width=2.75cm}]
+    \node[stp] (a) {\textbf{1. Size factors}\\[2pt] raw counts, \emph{median of ratios}: a robust CPM that assumes most genes do not change};
+    \node[stp,right=0.35cm of a] (b) {\textbf{2. Model}\\[2pt] negative binomial per gene:\\ \code{\textasciitilde\ donor + cytokine}};
+    \node[stp,right=0.35cm of b] (c) {\textbf{3. Dispersion}\\[2pt] noise of each gene, \emph{shrunk} towards a trend shared by all genes};
+    \node[stp,right=0.35cm of c,fill=accentred!10,draw=accentred] (d) {\textbf{4. Wald test}\\[2pt] $\log_2$FC of the cytokine coefficient, its standard error, $p$-value};
+    \foreach \x/\y in {a/b,b/c,c/d} \draw[-{Stealth},thick] (\x) -- (\y);
+  \end{tikzpicture}
+  \vspace{0.25cm}
+
+  \begin{columns}[T]
+    \begin{column}{0.5\linewidth}\small
+      \[ \log\mu_{gi}=\log s_i+\beta_{g,\text{donor}(i)}+\beta_{g,\text{cytokine}(i)} \]
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item $s_i$: size factor of sample $i$. Counts are modelled, not log-CPM.
+        \item \code{donor} gives each donor its own baseline: the \alert{paired design}.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}\small
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item With only 12 donors, a gene's own noise is poorly estimated: sharing information across genes makes the test \alert{more stable}.
+        \item In Python: \code{pydeseq2} (a port of the R package DESeq2, the field standard).
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.2 DESeq2 under the hood}
+  \centering
+  \figfit[0.5]{p4_deseq_diag}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \textbf{Size factors} (left) follow the library size, but are estimated from the genes that do not change, not from the total.
+    \item \textbf{Dispersion} (right): the noise of each gene (grey) is \alert{pulled towards the trend} (red) to give the value used in the test (blue).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{4.2 DESeq2 vs our log-CPM $t$-test}
+  \centering
+  \figfit[0.5]{p4_vs_ttest}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item Similar effect sizes ($r=\numreffect$). DEGs: DESeq2 \numndegdeseq, $t$-test \numndegt, \alert{both \numndegboth}.
+    \item The median $\lfc$ is \nummediandeseq\ with DESeq2 but \nummediancpm\ with CPM: the \alert{composition effect} of Part 2, corrected by the median of ratios.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{4.3 \numntested\ tests: raw $p$-values cannot be trusted}
+  \centering
+  \figfit[0.42]{p4_pvalues}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \numntested\ genes tested at 5\,\% $\Rightarrow$ $\approx\numnexpectedfp$ false positives \emph{if nothing happens}.
+    \item Null experiment (effects removed, signs of donors randomly flipped, $t$-test): \numnnullraw\ genes with $p<0.05$ and \alert{\numnnulladj} after correction.
+    \item Real data: \numnrawsig\ genes with $p<0.05$: a spike near 0 on a flat floor.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Benjamini--Hochberg: controlling the false discovery rate}
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}
+      With $m$ tests and $p_{(1)}\le\dots\le p_{(m)}$:
+      \[ p^{\mathrm{adj}}_{(i)}=\min_{k\ge i}\Bigl(\tfrac{m}{k}\,p_{(k)}\Bigr)\quad(\le1) \]
+      \small
+      \alert{FDR} $\le\alpha$: among the genes called significant at $\mathrm{padj}<0.05$, at most 5\,\% are expected to be false.\\[0.15cm]
+      \scriptsize
+      \input{bh_table.tex}
+    \end{column}
+    \begin{column}{0.44\linewidth}
+      \figfit[0.62]{p4_bh}\\[-0.1cm]
+      \scriptsize monocytes, \IFNg: sorted $p$-values and the line $\alpha k/m$. Everything up to $k^*=\numkstar$ is significant.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.4 What do we call ``differentially expressed''?}
+  \begin{columns}[c]
+    \begin{column}{0.56\linewidth}
+      \figfit[0.78]{p4_volcano}
+    \end{column}
+    \begin{column}{0.42\linewidth}\small
+      \[
+        \text{DEG}\;\Longleftrightarrow\;\mathrm{padj}<0.05\;\text{and}\;|\lfc|>0.5
+      \]
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item \textbf{Volcano}: effect size ($x$) against evidence ($y$). Significance $\neq$ importance: ask for both.
+        \item Monocytes + \IFNg: \alert{\numnup\ up} and \alert{\numndown\ down} among \numntested\ tested genes.
+        \item Labels: the strongest combination of effect and evidence. The classic IFN-$\gamma$ genes (\gene{CXCL9}, \gene{CXCL10}, \gene{IDO1}, \gene{GBP1}) are DEGs too.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.5 Comparing two cytokines}
+  \centering
+  \figfit[0.48]{p4_compare}\\[-2pt]
+  \scriptsize
+  \input{degcount_table.tex}
+  \begin{itemize}\footnotesize\setlength\itemsep{1pt}
+    \item Left: log$_2$FC of each cytokine vs PBS. Right: the direct comparison. Most DEGs are \alert{specific} to one cytokine.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{In the paper: responses match known biology}
+  \centering
+  \includegraphics[width=0.7\linewidth,height=0.45\textheight,keepaspectratio]{paper_fig1de.png}\\[-1pt]
+  {\tiny Oesinghaus \emph{et al.}\ 2025, Fig.\ 1d--e (CC BY-NC-ND 4.0)}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item Cytokine receptors and responses are cell-type specific (d); the induced genes (e) are the expected ones: IL-4 raises \gene{IL4R} and \gene{IL4I1} in B cells, IL-12 raises inflammatory and cytotoxicity genes in NK cells.
+    \item The paper used \alert{edgeR} on pseudobulks with the design \code{\textasciitilde\ donor + cytokine}: the same idea as our \code{pydeseq2} analysis.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Your turn in the notebook (Part 4)}
+  \small
+  Cells that start with \code{\# CHANGE ME} contain parameters you can modify. Change them, re-run and see what happens:
+  \vspace{0.2cm}
+
+  \begin{tabular}{@{}>{\ttfamily}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.68\linewidth}@{}}
+    \toprule
+    \textrm{\textbf{Parameter}} & \textbf{Try\ldots}\\\midrule
+    CYTOKINE, CELL\_TYPE & another cytokine (IL-4, TNF-alpha, IL-15\ldots) and cell type: how does the number of DEGs change?\\[2pt]
+    EXAMPLE\_GENE & a gene you expect to respond (\gene{ALOX15} for IL-4): which gets the smallest $p$-value?\\[2pt]
+    PADJ\_THRESH, LFC\_THRESH & $0.01$ and $1$: how many DEGs survive?\\[2pt]
+    CYTOKINE\_A, CYTOKINE\_B & two interferons, or two members of the same family: which pair is the most similar?\\[2pt]
+    CELL\_TYPES\_COMPARE & one or two cell types: where do the two cytokines differ most?\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Caveats: a teaching model}
+  \small
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.76\linewidth}@{}}
+    \toprule
+    \textbf{Design} & 12 donors: the unit of replication is the donor. \code{\textasciitilde\ donor + cytokine} removes baseline differences shared by both conditions, but donors with a high baseline interferon tone (the paper's ``interferon group'') respond differently.\\[3pt]
+    \textbf{Tool} & DESeq2 is the standard, but not the only one: \texttt{edgeR} and \texttt{limma-voom} are alternatives. All need \alert{raw counts} and replicates.\\[3pt]
+    \textbf{Pseudobulk} & Summing cells makes the donor the replicate. Testing single cells as if they were replicates inflates false positives.\\[3pt]
+    \textbf{Filtering} & Remove untestable genes \emph{before} correcting for multiple testing.\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Take-home messages}
+  \small
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.69\linewidth}@{}}
+    \toprule
+    \textbf{Look first} & What is a count? How was the control built? How deep is each sample? Different cell types have very different library sizes.\\[2pt]
+    \textbf{Normalize} & CPM for samples, $\log_2$ for genes, a filter for noise, z-scores only for heatmaps.\\[2pt]
+    \textbf{PCA} & Shows what varies most (cell type, then donor); colour by metadata, check R$^2$ and loadings.\\[2pt]
+    \textbf{Test} & DESeq2 on raw counts, paired by donor, with FDR correction and an effect-size threshold.\\[2pt]
+    \textbf{Compare} & Two cytokines: shared and specific genes, and the direct contrast.\\[2pt]
+    \textbf{Next step} & Turn DEG lists into biology with functional enrichment (pathways, transcription-factor targets).\\
+    \bottomrule
+  \end{tabular}
+\end{frame}

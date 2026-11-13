@@ -1,0 +1,455 @@
+% ════════════════════════════════════════════════════════════════════════════════════════
+\section{Parte 1: Introducción}
+
+\begin{frame}[fragile]{¿Qué es Python?}
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}
+      \begin{itemize}\setlength\itemsep{4pt}
+        \item Un \alert{lenguaje de programación de propósito general}: gratuito, legible y con una enorme comunidad.
+        \item Describes \emph{qué hacer} paso a paso y el ordenador lo hace, con 10 muestras o con 10 millones.
+        \item En ciencia es el \alert{pegamento} entre los datos y el análisis. Paquetes que usamos hoy:
+      \end{itemize}
+      \small
+      \begin{tabular}{@{}ll@{}}
+        \code{numpy} & matrices y álgebra lineal\\
+        \code{pandas} & tablas\\
+        \code{scipy}, \code{statsmodels} & estadística\\
+        \code{matplotlib} & gráficos\\
+        \code{scikit-learn} & aprendizaje automático\\
+        \code{anndata} & contenedores de datos ómicos\\
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.46\linewidth}
+\begin{lstlisting}
+genes  = ["STAT1", "CXCL9", "ACTB"]
+counts = {"STAT1": 73853, "ACTB": 36500}
+total  = sum(counts.values())
+print(f"{total:,} UMI en total")
+\end{lstlisting}
+      \vspace{0.15cm}
+      \begin{block}{Hoy no necesitas ser programador}
+        Te damos el código. Tu trabajo: \textbf{ejecutarlo, leer el resultado y entender qué significan los números}.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Qué es un notebook de Jupyter?}
+  \begin{columns}[c]
+    \begin{column}{0.56\linewidth}
+      \centering
+      \begin{tikzpicture}[font=\scriptsize, every node/.style={align=left}]
+        \node[draw=greyink!60,fill=white,minimum width=6.6cm,minimum height=3.9cm,anchor=north west] (page) at (0,0) {};
+        % markdown cell
+        \node[draw=none,fill=softgrey,minimum width=6.2cm,minimum height=0.95cm,anchor=north west] (md) at (0.2,-0.2) {};
+        \node[anchor=north west,font=\small\bfseries] at (0.35,-0.28) {Parte 2: normalización};
+        \node[anchor=north west,font=\scriptsize,text=greyink] at (0.35,-0.68) {Los conteos crudos no son comparables\ldots};
+        % code cell
+        \node[draw=bluemid,fill=bluemid!6,minimum width=6.2cm,minimum height=0.95cm,anchor=north west] (code) at (0.2,-1.3) {};
+        \node[anchor=north west,font=\ttfamily\scriptsize] at (0.35,-1.42) {adata = ad.read\_h5ad("data.h5ad")};
+        \node[anchor=north west,font=\ttfamily\scriptsize] at (0.35,-1.78) {print(adata.shape)};
+        \node[circle,fill=bluemid,text=white,inner sep=2pt,font=\tiny\bfseries] at (0.02,-1.8) {$\blacktriangleright$};
+        % output
+        \node[anchor=north west,font=\ttfamily\scriptsize,text=ucoblue] at (0.35,-2.45) {(4224, 18120)};
+        \node[anchor=north west,font=\scriptsize,text=greyink] at (3.3,-2.45) {$\leftarrow$ el resultado};
+        % labels
+        \node[anchor=west,text=accentred,font=\scriptsize\bfseries] at (6.9,-0.65) {texto};
+        \node[anchor=west,text=accentred,font=\scriptsize\bfseries] at (6.9,-1.75) {código};
+        \node[anchor=west,text=accentred,font=\scriptsize\bfseries] at (6.9,-2.55) {resultado};
+        \draw[accentred,-{Stealth}] (6.85,-0.65) -- (6.45,-0.65);
+        \draw[accentred,-{Stealth}] (6.85,-1.75) -- (6.45,-1.75);
+        \draw[accentred,-{Stealth}] (6.85,-2.55) -- (6.45,-2.55);
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.42\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item Un documento que mezcla \alert{texto, código y resultados}.
+        \item Dos tipos de celdas: de \textbf{texto} (Markdown) y de \textbf{código} (Python).
+        \item Ejecutar una celda: \alert{Shift\,+\,Enter}. El resultado aparece debajo.
+        \item Un \textbf{kernel} (el proceso de Python que hay detrás) \alert{recuerda} las variables: ejecuta las celdas \textbf{en orden}.
+        \item Reiniciar el kernel $\Rightarrow$ se borra la memoria.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Cómo lo vamos a ejecutar? Google Colab}
+  \begin{columns}[c]
+    \begin{column}{0.60\linewidth}
+      \centering
+      \begin{tikzpicture}[font=\scriptsize, every node/.style={align=left}]
+        \draw[rounded corners=3pt,draw=greyink!70,fill=white] (0,0) rectangle (7.6,-4.2);
+        \fill[greyink!12] (0,0) rectangle (7.6,-0.55);
+        \node[anchor=west,font=\scriptsize\bfseries] at (0.15,-0.28) {Practica\_v3\_es.ipynb};
+        \node[anchor=east,draw=bluemid,fill=bluemid!10,rounded corners=2pt,inner sep=2pt,font=\tiny] at (7.45,-0.28) {Conectar};
+        \fill[greyink!5] (0,-0.55) rectangle (7.6,-0.95);
+        \node[anchor=west,font=\tiny] at (0.15,-0.75) {Archivo\ \ Editar\ \ Ver\ \ Insertar\ \ \textbf{Entorno}\ \ Herram.\ \ Ayuda};
+        \node[anchor=west,font=\tiny,draw=greyink!50,inner sep=1.5pt] at (4.7,-0.75) {+ Código};
+        \node[anchor=west,font=\tiny,draw=greyink!50,inner sep=1.5pt] at (5.75,-0.75) {+ Texto};
+        \fill[greyink!8] (0,-0.95) rectangle (1.45,-4.2);
+        \node[anchor=north west,font=\tiny] at (0.1,-1.05) {$\equiv$ Índice\\ Parte 1\\ Parte 2\\ \quad 2.1 \ldots\\ Parte 3\\ Parte 4};
+        \node[draw=bluemid,fill=bluemid!6,minimum width=5.6cm,minimum height=1.15cm,anchor=north west] at (1.75,-1.15) {};
+        \node[anchor=north west,font=\ttfamily\tiny] at (2.2,-1.25) {adata = ad.read\_h5ad(DATA\_PATH)};
+        \node[circle,fill=bluemid,text=white,inner sep=2.5pt,font=\tiny] at (1.95,-1.7) {$\blacktriangleright$};
+        \node[anchor=north west,font=\ttfamily\tiny,text=ucoblue] at (2.2,-1.75) {\checkmark\ Cargado en memoria};
+        \node[draw=none,fill=softgrey,minimum width=5.6cm,minimum height=0.8cm,anchor=north west] at (1.75,-2.6) {};
+        \node[anchor=north west,font=\scriptsize\bfseries] at (1.9,-2.68) {2.2 Un número cada vez};
+        \node[anchor=north west,font=\tiny,text=greyink] at (1.9,-3.02) {las celdas de texto explican, las de código calculan};
+        % numbered callouts
+        \foreach \n/\x/\y/\tx/\ty in {1/7.2/0.28/7.2/-0.12, 2/1.55/-1.0/1.55/-1.3, 3/3.9/0.28/3.9/-0.55, 4/-0.3/-1.6/0.05/-1.6} {
+          \node[circle,fill=accentred,text=white,inner sep=1.5pt,font=\tiny\bfseries] (c\n) at (\x,\y) {\n};
+          \draw[accentred,thick] (c\n) -- (\tx,\ty);
+        }
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.38\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item Jupyter en tu \alert{navegador}: nada que instalar. Gratis, con una cuenta de Google.
+        \item Tu código se ejecuta en un \alert{ordenador temporal} en la nube de Google.
+      \end{itemize}
+      \vspace{0.1cm}
+      \begin{enumerate}\setlength\itemsep{2pt}\footnotesize
+        \item[\textcolor{accentred}{\textbf{1}}] \textbf{Conectar} a una sesión
+        \item[\textcolor{accentred}{\textbf{2}}] $\blacktriangleright$ \textbf{ejecutar} una celda
+        \item[\textcolor{accentred}{\textbf{3}}] menú \textbf{Entorno de ejecución}: ejecutar todo, reiniciar
+        \item[\textcolor{accentred}{\textbf{4}}] \textbf{Índice}: saltar entre partes
+      \end{enumerate}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Kit de supervivencia de Colab}
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}
+      \small
+      \begin{tabular}{@{}>{\ttfamily}p{0.38\linewidth}p{0.58\linewidth}@{}}
+        \toprule
+        \textrm{\textbf{Atajo}} & \textbf{Qué hace}\\\midrule
+        Shift+Enter & ejecuta y pasa a la siguiente\\
+        Ctrl+Enter & ejecuta y se queda\\
+        Ctrl+M B & inserta una celda debajo\\
+        Ctrl+M D & borra la celda\\
+        \bottomrule
+      \end{tabular}
+      \vspace{0.3cm}
+
+      \textbf{Si algo se rompe}
+      \begin{itemize}\footnotesize\setlength\itemsep{2pt}
+        \item \textbf{Entorno de ejecución $\rightarrow$ Reiniciar sesión} y vuelve a ejecutar desde el principio.
+        \item ¿Te has quedado atrás en la Parte 2? Usa la \alert{celda de rescate} al inicio de la Parte 3.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\linewidth}
+      \begin{block}{Conviene saber}
+        \footnotesize
+        \begin{itemize}\setlength\itemsep{3pt}
+          \item Las sesiones son \alert{temporales}: archivos y variables desaparecen al terminar. Descargamos los datos al principio (alrededor de un minuto).
+          \item Una sesión inactiva se desconecta: reconecta y vuelve a ejecutar.
+          \item Las celdas cuyo título termina en \emph{``ejecutar una vez, no hace falta leer''} están plegadas a propósito: son código auxiliar para los gráficos.
+          \item Para conservar tus cambios: \textbf{Archivo $\rightarrow$ Guardar una copia en Drive}.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% ────────────────────────────────────────────────────────────────────────────────────────
+\begin{frame}{¿Qué es la transcriptómica mediante RNA-seq?}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center},
+      stp/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=1.35cm,minimum width=2.05cm,inner sep=2pt}]
+    \node[stp] (a) {tejido o\\ células};
+    \node[stp,right=0.35cm of a] (b) {\textbf{extracción}\\ de RNA};
+    \node[stp,right=0.35cm of b] (c) {\textbf{librería}\\ fragmentos +\\ adaptadores};
+    \node[stp,right=0.35cm of c] (d) {\textbf{secuenciación}\\ millones de\\ lecturas};
+    \node[stp,right=0.35cm of d] (e) {\textbf{alineamiento}\\ lecturas $\to$ genes};
+    \node[stp,right=0.35cm of e,fill=accentred!10,draw=accentred] (f) {\textbf{matriz de}\\ \textbf{conteos}};
+    \foreach \x/\y in {a/b,b/c,c/d,d/e,e/f} \draw[-{Stealth},thick] (\x) -- (\y);
+  \end{tikzpicture}
+  \vspace{0.35cm}
+
+  \begin{columns}[T]
+    \begin{column}{0.5\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item El \alert{transcriptoma} es el conjunto de todas las moléculas de RNA de una muestra: qué genes están \emph{encendidos} y cuánto.
+        \item El \textbf{RNA-seq bulk} mide \alert{un perfil promedio por muestra}: todas las células están mezcladas.
+        \item Un \textbf{conteo} es el número de moléculas (o lecturas) asignadas a un gen.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}
+      \centering\footnotesize
+      \begin{tabular}{lrrr}
+        \toprule
+        gen & muestra 1 & muestra 2 & muestra 3\\\midrule
+        \gene{STAT1} & 5\,310 & 12\,874 & 4\,990\\
+        \gene{CXCL9} & 12 & 1\,950 & 9\\
+        \gene{ACTB} & 36\,500 & 41\,200 & 33\,800\\
+        $\vdots$ & $\vdots$ & $\vdots$ & $\vdots$\\
+        \bottomrule
+      \end{tabular}\\[2pt]
+      \scriptsize una matriz de conteos: \alert{genes $\times$ muestras} (números ilustrativos)
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{RNA-seq bulk y de célula única: los dos flujos de trabajo}
+  \begin{columns}[c]
+    \begin{column}{0.3\linewidth}
+      \centering\includegraphics[width=\linewidth,height=0.8\textheight,keepaspectratio]{tzec_fig1_bulk.png}
+    \end{column}
+    \begin{column}{0.3\linewidth}
+      \centering\includegraphics[width=\linewidth,height=0.8\textheight,keepaspectratio]{tzec_fig2_sc.png}
+    \end{column}
+    \begin{column}{0.36\linewidth}\small
+      \begin{itemize}\setlength\itemsep{4pt}
+        \item La misma lógica con distinta unidad: una \alert{muestra} (bulk) o una \alert{célula} (célula única).
+        \item Ambos terminan en una \alert{matriz de conteos}, que luego se normaliza y se analiza (expresión diferencial, enriquecimiento\ldots).
+        \item La célula única añade \alert{códigos de barras} para asignar cada lectura a su célula, y control de calidad por célula.
+      \end{itemize}
+      {\tiny Figuras 1 y 2 de Tzec-Interi\'an \emph{et al.}\ 2025, \emph{Quant.\ Biol.}\ (CC BY)}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Transcriptómica de célula única: un perfil por célula}
+  \begin{columns}[c]
+    \begin{column}{0.5\linewidth}
+      \centering
+      \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center}]
+        % bulk
+        \node[font=\scriptsize\bfseries] at (1.0,2.6) {bulk};
+        \foreach \c in {0,...,3} { \fill[ucoblue!\the\numexpr 35+\c*12\relax,draw=white] (\c*0.5,2.1) rectangle ++(0.45,-0.35); }
+        \node[font=\tiny,text=greyink] at (1.0,1.45) {1 muestra = 1 fila: promedio de todas las células};
+        % single cell
+        \node[font=\scriptsize\bfseries] at (1.0,0.85) {célula única};
+        \foreach \r in {0,...,5} {
+          \foreach \c in {0,...,3} {
+            \pgfmathsetmacro{\v}{ifthenelse(rnd>0.72,rnd*65+35,0)}
+            \fill[bluemid!\v!white,draw=greyink!25] (\c*0.5,0.4-\r*0.28) rectangle ++(0.45,-0.25);
+          }
+        }
+        \node[font=\tiny,text=greyink] at (1.0,-1.55) {1 célula = 1 fila: miles de filas, casi todo ceros};
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.48\linewidth}\small
+      \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.25\linewidth}>{\raggedright\arraybackslash}p{0.45\linewidth}@{}}
+        \toprule
+        & \textbf{bulk} & \textbf{célula única}\\\midrule
+        unidad & muestra & célula\\
+        filas & decenas & $10^4$--$10^7$\\
+        ceros & pocos & casi todas las entradas\\
+        revela & el promedio & tipos celulares y células raras\\
+        \bottomrule
+      \end{tabular}
+      \vspace{0.25cm}
+      \begin{itemize}\footnotesize\setlength\itemsep{3pt}
+        \item Cada célula recibe un \alert{código de barras}, de modo que las lecturas se asignan a su célula.
+        \item Los tipos celulares se identifican después por clustering y \emph{genes marcadores} (p.\,ej.\ \gene{LYZ} en monocitos, \gene{CD3E} en linfocitos T).
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Célula única por indexado combinatorio (split-pool)}
+  \centering
+  \begin{tikzpicture}[scale=0.92,transform shape,font=\scriptsize, every node/.style={align=center}]
+    % plates: 3 small grids
+    \foreach \p/\x/\col in {1/0.3/ucoblue, 2/3.5/orangeslot, 3/6.7/greenslot} {
+      \foreach \r in {0,...,2} \foreach \c in {0,...,3} {
+        \pgfmathsetmacro{\sh}{20+mod((\r*4+\c)*7+\p*11,70)}
+        \fill[\col!\sh!white] (\x+\c*0.3,-\r*0.3) rectangle ++(0.26,-0.26);
+      }
+      \node[font=\scriptsize\bfseries,text=\col] at (\x+0.6,0.3) {ronda \p};
+    }
+    \node[draw=greyink!50,rounded corners,minimum width=1.9cm,minimum height=0.8cm,font=\scriptsize] (cells) at (-1.5,-0.45) {células fijadas\\ \tiny (cada célula es su ``tubo'')};
+    \draw[-{Stealth},thick] (cells) -- (0.1,-0.45);
+    \draw[-{Stealth},thick] (1.65,-0.45) -- node[above,font=\tiny] {mezclar y repartir} (3.3,-0.45);
+    \draw[-{Stealth},thick] (4.85,-0.45) -- node[above,font=\tiny] {mezclar y repartir} (6.5,-0.45);
+    \node[draw=accentred,fill=accentred!8,rounded corners,minimum width=2.5cm,minimum height=0.95cm] (res) at (10.2,-0.45) {cada célula: un código\\ único \textbf{B1\,--\,B2\,--\,B3}};
+    \draw[-{Stealth},thick] (8.05,-0.45) -- (res);
+  \end{tikzpicture}
+  \vspace{0.3cm}
+
+  \begin{columns}[T]
+    \begin{column}{0.54\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item En cada ronda las células se \alert{reparten en pocillos al azar}; cada pocillo añade su propio código de barras al RNA de las células que contiene.
+        \item Tras tres rondas, la probabilidad de que dos células compartan los mismos tres códigos es minúscula: con 96 códigos por ronda, $96^3\approx 880\,000$ combinaciones (ilustrativo).
+        \item \textbf{Sin gotas ni aislamiento de células}: millones de células en un solo experimento.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\linewidth}
+      \begin{block}{En nuestros datos}
+        \footnotesize
+        El \alert{código de la primera ronda} es el pocillo de la placa de estimulación, es decir, la \alert{condición}: donante $\times$ citoquina. Es la columna \code{bc1\_well} del archivo crudo.\\[2pt]
+        El control PBS se repartió en \alert{6 pocillos}.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{¿Por qué hay que hacer pseudobulk primero?}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize]
+    \foreach \r in {0,...,5} {
+      \foreach \c in {0,...,7} {
+        \pgfmathsetmacro{\v}{ifthenelse(rnd>0.5,rnd*65+35,0)}
+        \fill[bluemid!\v!white,draw=greyink!25] (\c*0.28,-\r*0.28) rectangle ++(0.26,-0.26);
+      }
+    }
+    \node[align=center] at (1.1,0.6) {células de un donante, una citoquina, un tipo celular\\ \textbf{células $\times$ genes} (conteos UMI)};
+    \draw[decorate,decoration={brace,amplitude=4pt,mirror}] (-0.1,0) -- (-0.1,-1.65) node[midway,left=5pt] {células};
+    \draw[-{Stealth},very thick,accentred] (2.5,-0.8) -- node[above] {$\sum$ sobre células} (4.5,-0.8);
+    \foreach \c in {0,...,7} {
+      \pgfmathsetmacro{\v}{rnd*45+50}
+      \fill[ucoblue!\v] (4.8+\c*0.28,-0.55) rectangle ++(0.26,-0.26);
+    }
+    \node[align=center] at (5.9,0.2) {\textbf{una fila}\\ un perfil ``tipo bulk''};
+    \draw[thick] (8.6,0.2) rectangle (11.6,-1.9);
+    \foreach \r in {1,...,6} \draw[gray!50] (8.6,0.2-0.3*\r) -- (11.6,0.2-0.3*\r);
+    \fill[ucoblue!60] (8.6,-0.7) rectangle (11.6,-1.0);
+    \node[right] at (11.7,-0.85) {1 muestra};
+    \node at (10.1,-2.3) {\textbf{X}: \numnsamples\ muestras $\times$ \numngenesraw\ genes};
+  \end{tikzpicture}
+  \vspace{0cm}
+
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \alert{La unidad de replicación es el donante, no la célula}: millones de células proceden de solo 12 personas, y las células de una persona no son independientes. Analizar las células como si fueran réplicas produce muchos falsos positivos (\emph{pseudorreplicación}).
+    \item Los conteos de célula única son dispersos y ruidosos; sumados sobre miles de células se comportan como \alert{RNA-seq bulk}, así que se aplica una estadística estándar y transparente.
+    \item Hace los datos pequeños: 9.7 millones de células $\to$ \numnsamples\ muestras.
+  \end{itemize}
+\end{frame}
+
+% ────────────────────────────────────────────────────────────────────────────────────────
+\begin{frame}{El conjunto de datos: el Diccionario Humano de Citoquinas}
+  \begin{columns}[c]
+    \begin{column}{0.52\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.74\textheight,keepaspectratio]{paper_fig1ab.png}\\[-1pt]
+      {\tiny Oesinghaus \emph{et al.}\ 2025, Fig.\ 1a--b (CC BY-NC-ND 4.0)}
+    \end{column}
+    \begin{column}{0.44\linewidth}\small
+      \begin{itemize}\setlength\itemsep{4pt}
+        \item \alert{12 donantes sanos} (6 mujeres, 6 hombres; 34--75 años)
+        \item \alert{90 citoquinas} + un control PBS, in vitro durante \alert{24 h}
+        \item $\sim$\alert{9.7 millones} de PBMC tras el control de calidad
+        \item 16 tipos celulares, anotados con genes marcadores (panel b)
+      \end{itemize}
+      \vspace{0.2cm}
+      \footnotesize
+      \textbf{Pregunta del artículo:} ¿qué hace cada citoquina a cada tipo celular inmune y cuánto difieren las personas?
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Cómo se generaron los datos}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center},
+      stp/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=1.45cm,minimum width=1.85cm,inner sep=2pt},
+      numdot/.style={circle,fill=accentred,text=white,inner sep=1.5pt,font=\tiny\bfseries}]
+    \node[stp] (a) {PBMC de\\ 12 donantes};
+    \node[stp,right=0.3cm of a] (b) {placa de 96\\ 10$^6$ células/pocillo\\ citoquina o PBS\\ \textbf{24 h}};
+    \node[stp,right=0.3cm of b] (c) {fijar las\\ células};
+    \node[stp,right=0.3cm of c] (d) {\textbf{3 rondas}\\ de barcoding\\ split-pool};
+    \node[stp,right=0.3cm of d] (e) {secuenciación\\ $\sim$31\,000\\ lecturas/célula};
+    \node[stp,right=0.3cm of e,fill=accentred!10,draw=accentred] (f) {conteos\\ célula $\times$ gen};
+    \foreach \x/\y in {a/b,b/c,c/d,d/e,e/f} \draw[-{Stealth},thick] (\x) -- (\y);
+    \node[stp,below=0.75cm of d,fill=white] (g) {control de calidad\\ eliminar dobletes};
+    \node[stp,left=0.3cm of g,fill=white] (h) {clustering y\\ anotación:\\ 16 tipos celulares};
+    \node[stp,right=0.3cm of g,fill=white,draw=accentred] (i) {\textbf{pseudobulk}\\ donante $\times$ citoquina\\ $\times$ tipo celular};
+    \draw[-{Stealth},thick] (f.south) |- ($(g.north)+(0.5,0.35)$) -- ($(g.north)+(0.5,0)$);
+    \draw[-{Stealth},thick] (g) -- (i); \draw[-{Stealth},thick] (h) -- (g);
+  \end{tikzpicture}
+  \vspace{0.25cm}
+
+  \footnotesize
+  \begin{itemize}\setlength\itemsep{2pt}
+    \item Barcoding con el protocolo GigaLab de Parse Biosciences; sublibrerías de $\sim$100\,000 células; secuenciación en un Ultima UG-100.
+    \item Se conservaron células con 400--7\,000 genes detectados y $<15\,\%$ de lecturas mitocondriales.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{¿Qué contiene el subconjunto con el que trabajamos?}
+  \begin{columns}[T]
+    \begin{column}{0.56\linewidth}
+      \small
+      \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.52\linewidth}@{}}
+        \toprule
+        & \textbf{artículo} & \textbf{nuestra práctica}\\\midrule
+        donantes & 12 & 12\\[1pt]
+        citoquinas & 90 + PBS & 87 + PBS\\[1pt]
+        tipos celulares & 16 & 4: T CD4, T CD8, NK CD56\textsuperscript{low}, monocitos CD14\\[1pt]
+        unidad & células únicas & muestras \alert{pseudobulk}\\[1pt]
+        genes & todos & \numngenesraw\ codificantes de proteínas ($\to$ \numngenes\ tras filtrar)\\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.4\linewidth}
+      \begin{block}{El diseño}
+        \centering
+        $4$ tipos celulares\\ $\times$ $88$ condiciones\\ \footnotesize(87 citoquinas + PBS)\\ \normalsize $\times$ $12$ donantes\\[3pt]
+        $=$ \alert{\numnsamples\ muestras}
+      \end{block}
+      \footnotesize
+      El control PBS se midió en 6 pocillos; el archivo guarda cada pocillo \emph{y} su total. Nos quedamos con el total (extra B1 del notebook).
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{AnnData: una estructura de datos de Python para datos ómicos}
+  \begin{columns}[c]
+    \begin{column}{0.38\linewidth}
+      \centering
+      \includegraphics[width=\linewidth,height=0.76\textheight,keepaspectratio]{anndata_schema.png}\\[-1pt]
+      {\tiny Esquema de AnnData (documentación de anndata)}
+    \end{column}
+    \begin{column}{0.58\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item \textbf{Un objeto con varias tablas que siempre permanecen alineadas.}
+        \item \textcolor{ucoblue}{\textbf{\code{X}}}: la matriz principal, $n_{\text{obs}}\times n_{\text{vars}}$
+        \item \textcolor{yellowslot}{\textbf{\code{obs}}}: una fila por \alert{observación} (muestra o célula): metadatos
+        \item \textcolor{bluemid}{\textbf{\code{var}}}: una fila por \alert{variable} (gen): metadatos
+        \item \textcolor{greenslot}{\textbf{\code{layers}}}: más matrices, con la misma forma que \code{X}
+        \item \code{obsm}, \code{varm}, \code{obsp}, \code{varp}, \code{uns}: embeddings (PCA), grafos, resultados de formato libre
+      \end{itemize}
+      \vspace{0.15cm}
+      \begin{block}{Por qué importa}
+        \footnotesize Seleccionar un subconjunto mueve \emph{todas} las tablas a la vez: ningún gen ni muestra puede desalinearse de sus metadatos. Se guarda como archivo \code{.h5ad}.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{AnnData en nuestra práctica}
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}
+      \small
+      \begin{tabular}{@{}>{\ttfamily}p{0.16\linewidth}>{\raggedright\arraybackslash}p{0.47\linewidth}>{\raggedright\arraybackslash}p{0.3\linewidth}@{}}
+        \toprule
+        \textrm{\textbf{slot}} & \textbf{nuestros datos} & \textbf{forma}\\\midrule
+        X & conteos crudos, luego $\log_2$(CPM+1) & \numnsamples\,$\times$\,\numngenesraw\\[2pt]
+        obs & donor, cytokine, treatment, cell\_type, número de células & \numnsamples\ filas\\[2pt]
+        var & nombres de genes, conteos totales & \numngenesraw\ filas\\[2pt]
+        layers & \code{counts}, \code{cpm} & como \code{X}\\[2pt]
+        obsm & puntuaciones del PCA (Parte 3) & \numnsamples\,$\times$\,10\\
+        \bottomrule
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.46\linewidth}
+\begin{lstlisting}
+# primero filas (muestras), luego genes
+adata[["Donor1|CD14_Mono|IFN-gamma"],
+      ["STAT1"]]
+
+mask = adata.obs["cell_type"] == "CD14_Mono"
+adata[mask, ["IDO1", "CXCL10"]]
+\end{lstlisting}
+      \footnotesize La primera selección es de $1\times1$; la segunda, de $1\,056\times2$ (todas las muestras de monocitos).
+    \end{column}
+  \end{columns}
+  \vspace{0.25cm}
+  \begin{block}{Manos a la obra}
+    \small Volvemos al notebook: \textbf{preparación de la Parte 1} (instalar, cargar los datos) y después la \textbf{Parte 2}.
+    \timebox{unos 25 min para la Parte 1}
+  \end{block}
+\end{frame}

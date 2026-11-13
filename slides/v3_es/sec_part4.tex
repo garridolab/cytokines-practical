@@ -1,0 +1,218 @@
+% ════════════════════════════════════════════════════════════════════════════════════════
+\section{Parte 4: Expresión diferencial}
+
+\begin{frame}{Expresión diferencial: la pregunta y el flujo de trabajo}
+  \centering
+  \textit{Para el gen $g$: ¿es la expresión con la citoquina distinta de la expresión con PBS, más de lo esperable por azar?}\\[0.45cm]
+  \begin{tikzpicture}[font=\footnotesize, every node/.style={align=center},
+      box/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=1.1cm,minimum width=2.6cm,inner sep=3pt}]
+    \node[box] (a) {diseño pareado\\ mismo donante,\\ PBS vs citoquina};
+    \node[box,right=0.4cm of a] (b) {\textbf{DESeq2}\\ conteos crudos\\ $\Rightarrow$ valor $p$};
+    \node[box,right=0.4cm of b] (c) {pruebas múltiples\\ Benjamini--\\ Hochberg};
+    \node[box,right=0.4cm of c,fill=accentred!10,draw=accentred] (d) {umbrales\\ $\Rightarrow$ DEG};
+    \draw[-{Stealth},thick] (a) -- (b); \draw[-{Stealth},thick] (b) -- (c); \draw[-{Stealth},thick] (c) -- (d);
+    \node[font=\scriptsize,text=greyink,below=0.12cm of a] {4.1};
+    \node[font=\scriptsize,text=greyink,below=0.12cm of b] {4.2};
+    \node[font=\scriptsize,text=greyink,below=0.12cm of c] {4.3};
+    \node[font=\scriptsize,text=greyink,below=0.12cm of d] {4.4};
+  \end{tikzpicture}
+  \vspace{0.4cm}
+
+  \begin{block}{Predice}
+    En monocitos CD14 tratados con \IFNg: ¿más genes que \textbf{suben} o que \textbf{bajan}? ¿Decenas, cientos, miles?
+  \end{block}
+\end{frame}
+
+\begin{frame}{4.1 Diseño pareado: cada donante frente a sí mismo}
+  Cada donante se midió con PBS \emph{y} con cada citoquina; $y=\log_2(\text{CPM}+1)$:
+  \[ d_{gi}=y^{\text{citoquina}}_{gi}-y^{\text{PBS}}_{gi}\qquad(g=\text{gen},\ i=1,\dots,12\ \text{donantes}),\qquad \lfc_g=\bar d_g=\tfrac1{12}\textstyle\sum_i d_{gi} \]
+  \begin{columns}[c]
+    \begin{column}{0.55\linewidth}
+      \figfit[0.52]{p4_paired}
+    \end{column}
+    \begin{column}{0.43\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item Cada línea = un donante (rojo: mayor con la citoquina).
+        \item \gene{CXCL9}: todos los donantes suben, partiendo de líneas base distintas. $\bar d=\numlfcobs$ ($\times\numfoldobs$).
+        \item \gene{ACTB}: las líneas van en ambos sentidos, sin cambio consistente.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.1 La prueba $t$ pareada, a mano}
+  \begin{columns}[c]
+    \begin{column}{0.48\linewidth}
+      \[
+        s_g=\sqrt{\tfrac1{n-1}\textstyle\sum_i(d_{gi}-\bar d_g)^2},\qquad
+        t_g=\frac{\bar d_g}{s_g/\sqrt n}
+      \]
+      \[ p_g=2\,\Pr\bigl(T_{n-1}>|t_g|\bigr),\qquad n=12 \]
+      \small
+      \gene{CXCL9}, monocitos, \IFNg:
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item $\bar d=\numlfcobs$, \quad $t=\numtobs$, \quad gl $=11$
+        \item $p=\numpobs$
+      \end{itemize}
+      Bajo H$_0$ (sin efecto) $t_g\sim t_{n-1}$. El valor $p$ es la probabilidad de un $|t|$ al menos así de grande \emph{por azar}.
+    \end{column}
+    \begin{column}{0.5\linewidth}
+      \figfit[0.6]{p4_tdist}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.2 DESeq2: ¿cómo funciona?}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center},
+      stp/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=2.0cm,minimum width=2.95cm,inner sep=3pt,text width=2.75cm}]
+    \node[stp] (a) {\textbf{1. Factores de tamaño}\\[2pt] conteos crudos, \emph{mediana de cocientes}: un CPM robusto que supone que la mayoría de los genes no cambian};
+    \node[stp,right=0.35cm of a] (b) {\textbf{2. Modelo}\\[2pt] binomial negativa\\ por gen:\\ \code{\textasciitilde\ donor + cytokine}};
+    \node[stp,right=0.35cm of b] (c) {\textbf{3. Dispersión}\\[2pt] ruido de cada gen, \emph{contraído} hacia una tendencia común a todos los genes};
+    \node[stp,right=0.35cm of c,fill=accentred!10,draw=accentred] (d) {\textbf{4. Prueba de Wald}\\[2pt] $\log_2$FC del coeficiente de la citoquina, su error estándar, valor $p$};
+    \foreach \x/\y in {a/b,b/c,c/d} \draw[-{Stealth},thick] (\x) -- (\y);
+  \end{tikzpicture}
+  \vspace{0.25cm}
+
+  \begin{columns}[T]
+    \begin{column}{0.5\linewidth}\small
+      \[ \log\mu_{gi}=\log s_i+\beta_{g,\text{donor}(i)}+\beta_{g,\text{cytokine}(i)} \]
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item $s_i$: factor de tamaño de la muestra $i$. Se modelan los conteos, no el log-CPM.
+        \item \code{donor} da a cada donante su propia línea base: el \alert{diseño pareado}.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}\small
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item Con solo 12 donantes, el ruido propio de un gen se estima mal: compartir información entre genes hace la prueba \alert{más estable}.
+        \item En Python: \code{pydeseq2} (una adaptación del paquete de R DESeq2, el estándar del campo).
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.2 DESeq2 por dentro}
+  \centering
+  \figfit[0.5]{p4_deseq_diag}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item Los \textbf{factores de tamaño} (izquierda) siguen al tamaño de librería, pero se estiman a partir de los genes que no cambian, no del total.
+    \item \textbf{Dispersión} (derecha): el ruido de cada gen (gris) se \alert{acerca a la tendencia} (rojo) para dar el valor que se usa en la prueba (azul).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{4.2 DESeq2 frente a nuestra prueba $t$ sobre log-CPM}
+  \centering
+  \figfit[0.5]{p4_vs_ttest}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item Tamaños de efecto parecidos ($r=\numreffect$). DEG: DESeq2 \numndegdeseq, prueba $t$ \numndegt, \alert{ambos \numndegboth}.
+    \item El $\lfc$ mediano es \nummediandeseq\ con DESeq2 pero \nummediancpm\ con CPM: el \alert{efecto de composición} de la Parte 2, corregido por la mediana de cocientes.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{4.3 \numntested\ pruebas: no podemos fiarnos de los valores $p$ crudos}
+  \centering
+  \figfit[0.42]{p4_pvalues}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \numntested\ genes analizados al 5\,\% $\Rightarrow$ $\approx\numnexpectedfp$ falsos positivos \emph{si no pasa nada}.
+    \item Experimento nulo (efectos eliminados, signos de los donantes invertidos al azar, prueba $t$): \numnnullraw\ genes con $p<0.05$ y \alert{\numnnulladj} tras la corrección.
+    \item Datos reales: \numnrawsig\ genes con $p<0.05$: un pico cerca de 0 sobre un suelo plano.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Benjamini--Hochberg: controlar la tasa de falsos descubrimientos}
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}
+      Con $m$ pruebas y $p_{(1)}\le\dots\le p_{(m)}$:
+      \[ p^{\mathrm{adj}}_{(i)}=\min_{k\ge i}\Bigl(\tfrac{m}{k}\,p_{(k)}\Bigr)\quad(\le1) \]
+      \small
+      \alert{FDR} $\le\alpha$: entre los genes declarados significativos con $\mathrm{padj}<0.05$, se espera que como máximo el 5\,\% sean falsos.\\[0.15cm]
+      \scriptsize
+      \input{bh_table.tex}
+    \end{column}
+    \begin{column}{0.44\linewidth}
+      \figfit[0.62]{p4_bh}\\[-0.1cm]
+      \scriptsize monocitos, \IFNg: valores $p$ ordenados y la recta $\alpha k/m$. Todo hasta $k^*=\numkstar$ es significativo.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.4 ¿Qué llamamos ``diferencialmente expresado''?}
+  \begin{columns}[c]
+    \begin{column}{0.56\linewidth}
+      \figfit[0.78]{p4_volcano}
+    \end{column}
+    \begin{column}{0.42\linewidth}\small
+      \[
+        \text{DEG}\;\Longleftrightarrow\;\mathrm{padj}<0.05\;\text{y}\;|\lfc|>0.5
+      \]
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item \textbf{Volcán}: tamaño del efecto ($x$) frente a evidencia ($y$). Significación $\neq$ importancia: pide ambas.
+        \item Monocitos + \IFNg: \alert{\numnup\ suben} y \alert{\numndown\ bajan} entre \numntested\ genes analizados.
+        \item Etiquetas: la mejor combinación de efecto y evidencia. Los genes clásicos de IFN-$\gamma$ (\gene{CXCL9}, \gene{CXCL10}, \gene{IDO1}, \gene{GBP1}) también son DEG.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{4.5 Comparar dos citoquinas}
+  \centering
+  \figfit[0.48]{p4_compare}\\[-2pt]
+  \scriptsize
+  \input{degcount_table.tex}
+  \begin{itemize}\footnotesize\setlength\itemsep{1pt}
+    \item Izquierda: log$_2$FC de cada citoquina vs PBS. Derecha: la comparación directa. La mayoría de los DEG son \alert{específicos} de una citoquina.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{En el artículo: las respuestas coinciden con la biología conocida}
+  \centering
+  \includegraphics[width=0.7\linewidth,height=0.45\textheight,keepaspectratio]{paper_fig1de.png}\\[-1pt]
+  {\tiny Oesinghaus \emph{et al.}\ 2025, Fig.\ 1d--e (CC BY-NC-ND 4.0)}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item Los receptores de citoquinas y las respuestas son específicos de cada tipo celular (d); los genes inducidos (e) son los esperados: IL-4 aumenta \gene{IL4R} e \gene{IL4I1} en linfocitos B, IL-12 aumenta genes inflamatorios y de citotoxicidad en células NK.
+    \item El artículo usó \alert{edgeR} sobre pseudobulks con el diseño \code{\textasciitilde\ donor + cytokine}: la misma idea que nuestro análisis con \code{pydeseq2}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Tu turno en el notebook (Parte 4)}
+  \small
+  Las celdas que empiezan por \code{\# CAMBIA ESTO} contienen parámetros que puedes modificar. Cámbialos, vuelve a ejecutar y mira qué pasa:
+  \vspace{0.2cm}
+
+  \begin{tabular}{@{}>{\ttfamily}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.68\linewidth}@{}}
+    \toprule
+    \textrm{\textbf{Parámetro}} & \textbf{Prueba\ldots}\\\midrule
+    CYTOKINE, CELL\_TYPE & otra citoquina (IL-4, TNF-alpha, IL-15\ldots) y otro tipo celular: ¿cómo cambia el número de DEG?\\[2pt]
+    EXAMPLE\_GENE & un gen que esperes que responda (\gene{ALOX15} para IL-4): ¿cuál obtiene el menor valor $p$?\\[2pt]
+    PADJ\_THRESH, LFC\_THRESH & $0.01$ y $1$: ¿cuántos DEG sobreviven?\\[2pt]
+    CYTOKINE\_A, CYTOKINE\_B & dos interferones, o dos miembros de la misma familia: ¿qué pareja es la más parecida?\\[2pt]
+    CELL\_TYPES\_COMPARE & uno o dos tipos celulares: ¿dónde difieren más las dos citoquinas?\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Salvedades: un modelo didáctico}
+  \small
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.2\linewidth}>{\raggedright\arraybackslash}p{0.76\linewidth}@{}}
+    \toprule
+    \textbf{Diseño} & 12 donantes: la unidad de replicación es el donante. \code{\textasciitilde\ donor + cytokine} elimina las diferencias basales comunes a ambas condiciones, pero los donantes con un tono basal alto de interferón (el ``grupo de interferón'' del artículo) responden de forma distinta.\\[3pt]
+    \textbf{Herramienta} & DESeq2 es el estándar, pero no el único: \texttt{edgeR} y \texttt{limma-voom} son alternativas. Todas necesitan \alert{conteos crudos} y réplicas.\\[3pt]
+    \textbf{Pseudobulk} & Sumar las células convierte al donante en la réplica. Analizar células únicas como si fueran réplicas infla los falsos positivos.\\[3pt]
+    \textbf{Filtrado} & Elimina los genes no analizables \emph{antes} de corregir por pruebas múltiples.\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Mensajes para llevarse a casa}
+  \small
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.69\linewidth}@{}}
+    \toprule
+    \textbf{Mira primero} & ¿Qué es un conteo? ¿Cómo se construyó el control? ¿Qué profundidad tiene cada muestra? Los distintos tipos celulares tienen tamaños de librería muy distintos.\\[2pt]
+    \textbf{Normaliza} & CPM para las muestras, $\log_2$ para los genes, un filtro para el ruido y z-scores solo para los mapas de calor.\\[2pt]
+    \textbf{PCA} & Muestra lo que más varía (tipo celular, después donante); colorea por metadatos y comprueba la R$^2$ y las cargas.\\[2pt]
+    \textbf{Contrasta} & DESeq2 sobre conteos crudos, pareado por donante, con corrección por FDR y un umbral de tamaño del efecto.\\[2pt]
+    \textbf{Compara} & Dos citoquinas: genes compartidos y específicos, y el contraste directo.\\[2pt]
+    \textbf{Siguiente paso} & Convertir las listas de DEG en biología con enriquecimiento funcional (rutas, dianas de factores de transcripción).\\
+    \bottomrule
+  \end{tabular}
+\end{frame}

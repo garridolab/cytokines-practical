@@ -1,0 +1,178 @@
+% ══════════════════════════════════════════════════════════════════════════════════════════
+%  Human cytokine dictionary: Immunology practical (slides, v3)
+%  Build:  python slides/v3/make_figures.py   (figures, numbers and tables from the notebook)
+%          cd slides/v3 && latexmk -xelatex main.tex
+% ══════════════════════════════════════════════════════════════════════════════════════════
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme[progressbar=frametitle,numbering=fraction,sectionpage=progressbar]{metropolis}
+
+\usepackage{iftex}
+\ifPDFTeX\usepackage[T1]{fontenc}\usepackage[utf8]{inputenc}\fi
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,decorations.pathreplacing,matrix}
+\usepackage{appendixnumberbeamer}
+\graphicspath{{img/}}
+
+\ifXeTeX
+  \setsansfont[Extension=.otf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Italic,BoldItalicFont=*-BoldItalic]{FiraSans}
+  \setmonofont[Extension=.otf,UprightFont=*-Regular,BoldFont=*-Bold,Scale=0.92]{FiraMono}
+\fi
+\input{numbers.tex}                                    % numbers computed by make_figures.py
+
+% ── colours (same hues as the notebook figures) ─────────────────────────────────────────
+\definecolor{ucoblue}{HTML}{184F95}
+\definecolor{bluemid}{HTML}{2A78D6}
+\definecolor{accentred}{HTML}{E34948}
+\definecolor{greyink}{HTML}{52514E}
+\definecolor{softgrey}{HTML}{F0EFEC}
+\definecolor{orangeslot}{HTML}{EB6834}
+\definecolor{greenslot}{HTML}{1BAF7A}
+\definecolor{yellowslot}{HTML}{EDA100}
+\definecolor{magentaslot}{HTML}{E87BA4}
+\setbeamercolor{frametitle}{bg=ucoblue,fg=white}
+\setbeamercolor{progress bar}{fg=accentred,bg=ucoblue!30}
+\setbeamercolor{alerted text}{fg=accentred}
+\setbeamercolor{block title}{bg=ucoblue!85,fg=white}
+\setbeamercolor{block body}{bg=softgrey,fg=black}
+\setbeamercolor{title separator}{fg=accentred}
+\setbeamercolor{section title}{fg=ucoblue}
+\setbeamerfont{block title}{size=\small}
+\setbeamertemplate{navigation symbols}{}
+
+% ── helpers ───────────────────────────────────────────────────────────────────────────
+\newcommand{\gene}[1]{\textit{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\IFNg}{IFN-$\gamma$}
+\newcommand{\figfit}[2][0.66]{\includegraphics[width=\linewidth,height=#1\textheight,keepaspectratio]{#2}}
+\newcommand{\lfc}{\log_2\mathrm{FC}}
+\newcommand{\timebox}[1]{\hfill{\footnotesize\textcolor{greyink}{$\circ$ #1}}}
+
+\lstset{basicstyle=\ttfamily\scriptsize,keywordstyle=\color{bluemid}\bfseries,commentstyle=\color{greyink}\itshape,
+        stringstyle=\color{accentred},showstringspaces=false,frame=single,rulecolor=\color{ucoblue!40},
+        backgroundcolor=\color{softgrey},language=Python,columns=fullflexible,keepspaces=true,
+        literate={→}{{$\rightarrow$}}1}
+
+\title{Human cytokine dictionary}
+\subtitle{From raw counts to differential expression\\ AnnData $\cdot$ normalization $\cdot$ PCA $\cdot$ differential analysis}
+\author{Martin Garrido-Rodriguez}
+\institute{UCO $\cdot$ Immunology practical}
+\date{Based on Oesinghaus \emph{et al.} (2025), \emph{A single-cell cytokine dictionary of human peripheral blood}}
+
+\begin{document}
+
+\maketitle
+
+% ════════════════════════════════════════════════════════════════════════════════════════
+\begin{frame}{Plan of the practical: 2 h 30 min}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center},
+      seg/.style={draw=white,thick,minimum height=1.3cm,text=white,font=\scriptsize\bfseries,inner sep=1pt}]
+    \def\u{0.0866}   % cm per minute, total width = 150 min = 13 cm
+    \node[seg,fill=ucoblue,       minimum width={25*\u cm}, anchor=west] at (0,0)   {1\\ Intro};
+    \node[seg,fill=bluemid,       minimum width={40*\u cm}, anchor=west] at (25*\u,0)  {2\\ Data \& normalization};
+    \node[seg,fill=greyink!60,    minimum width={10*\u cm}, anchor=west] at (65*\u,0)  {break};
+    \node[seg,fill=orangeslot,    minimum width={35*\u cm}, anchor=west] at (75*\u,0)  {3\\ PCA};
+    \node[seg,fill=accentred,     minimum width={35*\u cm}, anchor=west] at (110*\u,0) {4\\ Differential expr.};
+    \node[seg,fill=greyink,       minimum width={5*\u cm},  anchor=west] at (145*\u,0) {};
+    \foreach \t/\x in {0/0,25/25,65/65,75/75,110/110,150/150}
+      \node[below=0.12cm,text=greyink] at (\x*\u,-0.65) {\t'};
+  \end{tikzpicture}
+
+  \vspace{0.45cm}
+  \small
+  \begin{tabular}{@{}p{0.07\linewidth}p{0.47\linewidth}p{0.18\linewidth}p{0.17\linewidth}@{}}
+    \toprule
+    \textbf{Part} & \textbf{Topic} & \textbf{Format} & \textbf{Time}\\\midrule
+    \textbf{1} & Introduction: Python, Jupyter, Colab, RNA-seq, single-cell, pseudobulk, dataset, AnnData & slides & 25 min\\[2pt]
+    \textbf{2} & Manipulating and normalizing the data & notebook & 40 min\\[2pt]
+    & \textit{Break} & & 10 min\\[2pt]
+    \textbf{3} & Principal Component Analysis: one analysis to rule them all & slides + notebook & 35 min\\[2pt]
+    \textbf{4} & Differential expression: cytokine vs control & slides + notebook & 35 min\\[2pt]
+    & Wrap-up & & 5 min\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\input{sec_intro.tex}
+\input{sec_part2.tex}
+\input{sec_part3.tex}
+\input{sec_part4.tex}
+
+% ════════════════════════════════════════════════════════════════════════════════════════
+\section{Wrap-up}
+
+\begin{frame}{The whole practical in one picture}
+  \centering
+  \begin{tikzpicture}[font=\small, every node/.style={align=center},
+      box/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=1.0cm,minimum width=2.3cm},
+      mod/.style={font=\scriptsize\bfseries,text=white,fill=ucoblue,rounded corners,inner sep=2pt}]
+    \node[box] (h5) {\code{.h5ad}\\ raw counts};
+    \node[box,right=0.55cm of h5] (an) {AnnData\\ \numnsamples\ $\times$ \numngenesraw};
+    \node[box,right=0.55cm of an] (norm) {CPM, $\log_2$,\\ filter};
+    \node[box,right=0.7cm of norm,yshift=0.85cm] (pca) {PCA\\ colour by metadata};
+    \node[box,right=0.7cm of norm,yshift=-0.85cm,fill=accentred!10,draw=accentred] (de) {DESeq2, FDR\\ volcano, 2 cytokines};
+    \draw[-{Stealth},thick] (h5) -- (an); \draw[-{Stealth},thick] (an) -- (norm);
+    \draw[-{Stealth},thick] (norm) -- (pca); \draw[-{Stealth},thick] (norm) -- (de);
+    \node[mod,above=0.1cm of h5] {Part 1}; \node[mod,above=0.1cm of an] {Part 2}; \node[mod,above=0.1cm of norm] {Part 2};
+    \node[mod,above=0.1cm of pca] {Part 3}; \node[mod,below=0.1cm of de] {Part 4};
+  \end{tikzpicture}
+  \vspace{0.3cm}
+
+  \begin{itemize}\small\setlength\itemsep{3pt}
+    \item Look at the data before computing anything: what is a count, how was the control built, how deep is each sample?
+    \item Normalize deliberately: samples, genes and heatmaps are three different problems.
+    \item Let PCA show what varies; test what the question needs, paired by donor, corrected for multiple testing.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Quick quiz: 3 questions, 1 minute}
+  \small
+  Answer on the Google Form: \alert{[add the link or QR code of the form here]}
+  \vspace{0.15cm}
+
+  \begin{enumerate}\setlength\itemsep{6pt}
+    \item Sample A has 5$\times$ more counts of \emph{every} gene than sample B, only because it was sequenced deeper. After CPM normalization, what do you expect for a gene that does not change?\\
+      \textbf{a)} 5$\times$ higher in A \quad \textbf{b)} the same in A and B \quad \textbf{c)} 5$\times$ lower in A
+    \item In the PCA of all the samples, what separates the samples most strongly (PC1)?\\
+      \textbf{a)} the cytokine \quad \textbf{b)} the donor \quad \textbf{c)} the cell type \quad \textbf{d)} the library size
+    \item Why do we use adjusted $p$-values (FDR) when we test $\sim$13\,000 genes?\\
+      \textbf{a)} raw $p$-values are computed wrongly \quad \textbf{b)} to limit the false positives that appear by chance when many tests are done \quad \textbf{c)} to obtain more significant genes
+  \end{enumerate}
+\end{frame}
+
+\appendix
+
+\begin{frame}{Instructor only: answer key of the quiz}
+  \small
+  \begin{enumerate}\setlength\itemsep{6pt}
+    \item \textbf{b)} CPM divides by the library size, so a gene that does not change has the same CPM in both samples (Part 2).
+    \item \textbf{c)} The cell type: PC1 separates monocytes from lymphocytes and PC2 NK from T cells; cytokine effects are small by comparison (Part 3).
+    \item \textbf{b)} At 5\,\% significance, $\sim$5\,\% of 13\,000 tests ($\approx$ 650 genes) are significant by chance if nothing happens; the Benjamini--Hochberg correction controls the false discovery rate (Part 4).
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}{References}
+  \scriptsize
+  \begin{itemize}\setlength\itemsep{3pt}
+    \item Oesinghaus L.\ \emph{et al.} (2025) A single-cell cytokine dictionary of human peripheral blood. \emph{bioRxiv}. \texttt{doi:10.64898/2025.12.12.693897}
+    \item Virshup I.\ \emph{et al.} (2024) anndata: Access and store annotated data matrices. \emph{J.\ Open Source Softw.} 9(101):4371.
+    \item Heumos L.\ \emph{et al.} (2023) Best practices for single-cell analysis across modalities. \emph{Nat.\ Rev.\ Genet.} 24:550--572.
+    \item Tzec-Interi\'an J.A., Gonz\'alez-Padilla D., G\'ongora-Castillo E.B. (2025) Bioinformatics perspectives on transcriptomics: a comprehensive review of bulk and single-cell RNA sequencing analyses. \emph{Quant.\ Biol.} e78. \texttt{doi:10.1002/qub2.78}
+    \item Squair J.W.\ \emph{et al.} (2021) Confronting false discoveries in single-cell differential expression. \emph{Nat.\ Commun.} 12:5692.
+    \item Benjamini Y., Hochberg Y. (1995) Controlling the false discovery rate. \emph{J.\ R.\ Stat.\ Soc.\ B} 57:289--300.
+    \item Robinson M.D., McCarthy D.J., Smyth G.K. (2010) edgeR. \emph{Bioinformatics} 26:139--140.
+    \item Muzellec B.\ \emph{et al.} (2023) PyDESeq2: a python package for bulk RNA-seq differential expression analysis. \emph{Bioinformatics} 39:btad547.
+    \item Love M.I., Huber W., Anders S. (2014) Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. \emph{Genome Biol.} 15:550.
+    \item Ritchie M.E.\ \emph{et al.} (2015) limma powers differential expression analyses for RNA-sequencing and microarray studies. \emph{Nucleic Acids Res.} 43:e47.
+    \item Pedregosa F.\ \emph{et al.} (2011) Scikit-learn: machine learning in Python. \emph{J.\ Mach.\ Learn.\ Res.} 12:2825--2830.
+  \end{itemize}
+\end{frame}
+
+\end{document}

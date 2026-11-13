@@ -1,0 +1,271 @@
+% ════════════════════════════════════════════════════════════════════════════════════════
+\section{Parte 2: Manipular y normalizar los datos}
+
+\begin{frame}{Hoja de ruta de la Parte 2: 40 min, en el notebook}
+  \small
+  \begin{tabular}{@{}p{0.07\linewidth}p{0.6\linewidth}p{0.2\linewidth}@{}}
+    \toprule
+    \textbf{Paso} & \textbf{Pregunta} & \textbf{Tiempo}\\\midrule
+    \textbf{2.1} & Preparar el objeto & 3 min\\[3pt]
+    \textbf{2.2} & ¿Qué pinta tienen los datos? De \textbf{1 número} a la \textbf{matriz completa} & 10 min\\[3pt]
+    \textbf{2.3} & ¿Qué es un \textbf{conteo}? ¿Por qué las librerías tienen distinto tamaño? & 7 min\\[3pt]
+    \textbf{2.4} & \textbf{Normalización}: qué, por qué, cómo & 10 min\\[3pt]
+    \textbf{2.5} & ¿Por qué \textbf{filtramos} los genes poco expresados? & 5 min\\[3pt]
+    \textbf{2.6} & \textbf{Mapas de calor} antes y después de normalizar & 5 min\\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.3cm}
+
+  \begin{block}{Objetivo}
+    Entender qué hay dentro de los datos y convertir los \alert{conteos crudos} en números que podamos \alert{comparar} entre muestras y entre genes.
+  \end{block}
+\end{frame}
+
+\begin{frame}{2.2 De un número a la matriz completa}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize]
+    % the big matrix
+    \draw[thick,fill=softgrey] (0,0) rectangle (6.2,-3.2);
+    \node[align=center] at (3.4,-1.9) {\textbf{la matriz completa}\\ \numnsamples\ muestras $\times$ \numngenesraw\ genes\\ \footnotesize 76 millones de números};
+    \node[above,font=\tiny,text=greyink] at (3.1,0) {genes $\rightarrow$};
+    \node[rotate=90,above,font=\tiny,text=greyink] at (0,-1.6) {muestras $\rightarrow$};
+    % the three zoom levels, at the corner
+    \fill[accentred] (0,0) rectangle ++(0.2,-0.2);
+    \fill[bluemid]   (0,-0.3) rectangle ++(1.0,-0.2);
+    \fill[orangeslot] (0,-0.65) rectangle ++(1.0,-1.0);
+    \foreach \i in {1,...,4} { \draw[white] (\i*0.2,-0.65) -- (\i*0.2,-1.65); \draw[white] (0,-0.65-\i*0.2) -- (1.0,-0.65-\i*0.2); }
+    % explanations
+    \node[anchor=west,draw=accentred,very thick,rounded corners,fill=accentred!6,minimum width=6.0cm,align=left,inner sep=3pt] (a) at (7.3,0.1)
+      {\textbf{$1\times1$} un gen en una muestra\\ \ttfamily\scriptsize adata[[sample], ["STAT1"]]};
+    \node[anchor=west,draw=bluemid,very thick,rounded corners,fill=bluemid!6,minimum width=6.0cm,align=left,inner sep=3pt] (b) at (7.3,-1.15)
+      {\textbf{$1\times5$} una muestra, cinco genes\\ \ttfamily\scriptsize adata[[sample], five\_genes]};
+    \node[anchor=west,draw=orangeslot,very thick,rounded corners,fill=orangeslot!6,minimum width=6.0cm,align=left,inner sep=3pt] (c) at (7.3,-2.4)
+      {\textbf{$5\times5$} cinco muestras, cinco genes\\ \ttfamily\scriptsize adata[five\_samples, five\_genes]};
+  \end{tikzpicture}
+
+  \vspace{0.2cm}
+  \begin{itemize}\small\setlength\itemsep{3pt}
+    \item Cada trozo viene con sus \alert{metadatos}: \code{.obs} describe las muestras (filas) y \code{.var} los genes (columnas).
+    \item La tabla de 5\,$\times$\,5 es solo la esquina superior izquierda de la matriz completa: lo que hagamos a continuación se aplica a \emph{toda} ella.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{2.3 ¿Qué es un conteo?}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center}]
+    % molecules
+    \node[font=\scriptsize\bfseries] at (1.2,1.15) {3 moléculas de mRNA de\\ un gen (todas las células sumadas)};
+    \foreach \i/\col/\u in {0/accentred/AAGT, 1/bluemid/CCTA, 2/greenslot/GGAC} {
+      \draw[thick,\col] (\i*0.95,0.1) .. controls (\i*0.95+0.2,0.4) and (\i*0.95+0.4,-0.2) .. (\i*0.95+0.7,0.1);
+      \node[fill=\col,text=white,inner sep=1.5pt,font=\tiny\ttfamily] at (\i*0.95+0.35,-0.28) {\u};
+    }
+    \draw[-{Stealth},very thick] (3.2,0) -- node[above,font=\tiny] {amplificación\\ + secuenciación} (5.2,0);
+    % reads
+    \node[font=\scriptsize\bfseries] at (7.0,1.15) {6 lecturas};
+    \foreach \i/\col/\u in {0/accentred/AAGT, 1/accentred/AAGT, 2/bluemid/CCTA, 3/greenslot/GGAC, 4/greenslot/GGAC, 5/greenslot/GGAC} {
+      \node[fill=\col,text=white,inner sep=2pt,font=\tiny\ttfamily] at (5.6+\i*0.62,0) {\u};
+    }
+    \draw[-{Stealth},very thick] (9.6,0) -- node[above,font=\tiny] {colapsar lecturas\\ con el mismo UMI} (11.6,0);
+    \node[draw=accentred,rounded corners,fill=accentred!8,inner sep=4pt,font=\small\bfseries] at (12.9,0) {conteo = 3};
+  \end{tikzpicture}
+  \vspace{0.3cm}
+
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item Un \textbf{UMI} (\emph{identificador molecular único}) es una etiqueta aleatoria añadida a cada molécula \emph{original}.
+        \item Contar \alert{UMI distintos} en lugar de lecturas elimina los duplicados de PCR: un UMI $=$ una molécula.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item En un pseudobulk el conteo se \alert{suma sobre todas las células} de la muestra.
+        \item Así, un conteo es un entero no negativo que depende de la \textbf{biología} y de \textbf{cuánto material} tenemos.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{2.3 Tamaño de librería: células $\times$ UMI por célula}
+  \centering
+  \figfit[0.42]{p2_libsize}\\[-1pt]
+  \begin{columns}[c]
+    \begin{column}{0.4\linewidth}
+      \centering\scriptsize
+      \input{libsize_table.tex}
+    \end{column}
+    \begin{column}{0.58\linewidth}\footnotesize
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item \textbf{Tamaño de librería} $L_i=\sum_j\text{conteo}_{ij}$: conteos totales de la muestra.
+        \item T CD4: los más abundantes; NK: los más escasos ($\sim$400 células).
+        \item Monocitos: \alert{\numumiMono\ UMI por célula} frente a $\sim$\numumiNK\ en linfocitos (más mRNA).
+        \item Controles PBS (suma de 6 pocillos): \alert{\numpbsratio$\times$ más profundos}.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{2.4 ¿Por qué normalizar? Un ejemplo}
+  \begin{columns}[c]
+    \begin{column}{0.56\linewidth}
+      \figfit[0.62]{p2_toy}
+    \end{column}
+    \begin{column}{0.42\linewidth}\small
+      \textit{¿Se usa más la palabra ``citoquina'' en un artículo de 10 páginas o en una revisión de 100?} Comparamos \alert{frecuencias}, no conteos.
+      \vspace{0.2cm}
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item Mismo donante: un control PBS (profundo) y una muestra con IFN-$\gamma$ (5$\times$ más superficial). El gen B es un gen de respuesta a interferón.
+        \item \alert{Conteos crudos}: todos los genes parecen \emph{menores} con IFN-$\gamma$, incluso el gen B, inducido por interferón.
+        \item \alert{CPM}: A, C y D no cambian y B sube $4\times$. La respuesta correcta.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{CPM: conteos por millón}
+  \[
+    \text{CPM}_{ij}\;=\;\frac{\text{conteo}_{ij}}{L_i}\times 10^{6},\qquad L_i=\sum_{j}\text{conteo}_{ij}
+  \]
+  \centering
+  \figfit[0.46]{p2_actb}\\[-2pt]
+  \small \gene{ACTB}, un gen constitutivo, en monocitos (incluidas las muestras PBS). Tras el CPM ya no sigue al tamaño de librería.
+\end{frame}
+
+\begin{frame}{El logaritmo: entre genes}
+  \begin{columns}[c]
+    \begin{column}{0.6\linewidth}
+      \figfit[0.6]{p2_logvar}
+    \end{column}
+    \begin{column}{0.38\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item En CPM, la \alert{varianza crece mucho con la media}.
+        \item Los 20 genes más variables acumulan el \numtoptwentycpm\ de la varianza total en CPM\ldots{}
+        \item \ldots{}y solo el \numtoptwentylog\ tras $\log_2(\text{CPM}+1)$.
+        \item El PCA, el clustering y las pruebas $t$ dependen de la varianza: sin el logaritmo, unos pocos genes abundantes lo deciden todo.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{El logaritmo y el pseudoconteo}
+  \[ \text{log-CPM}_{ij}=\log_2\bigl(\text{CPM}_{ij}+1\bigr) \]
+  \begin{columns}[T]
+    \begin{column}{0.45\linewidth}
+      \footnotesize\textbf{Los fold changes se vuelven simétricos}\\[3pt]
+      \scriptsize\setlength\tabcolsep{2.5pt}
+      \begin{tabular}{@{}lccccccc@{}}
+        \toprule
+        fold change & $\times4$ & $\times2$ & $\times1.4$ & $\times1$ & $\times0.7$ & $\times0.5$ & $\times0.25$\\
+        $\lfc$ & $+2$ & $+1$ & $+0.5$ & $0$ & $-0.5$ & $-1$ & $-2$\\
+        \bottomrule
+      \end{tabular}\\[4pt]
+      La diferencia de dos valores en log \emph{es} el log fold change.
+    \end{column}
+    \begin{column}{0.53\linewidth}
+      \footnotesize\textbf{¿Por qué ``+1''?}\\[3pt]
+      \setlength\tabcolsep{2.5pt}
+      \begin{tabular}{@{}lrrrr@{}}
+        \toprule
+        gen & ctrl & trt & $\lfc$ & $\lfc^{+1}$\\\midrule
+        casi silencioso & 0.1 & 0.4 & $+2.00$ & $+0.35$\\
+        silencioso $\to$ detectado & 0 & 0.5 & $+\infty$ & $+0.58$\\
+        moderado & 20 & 40 & $+1.00$ & $+0.97$\\
+        alto & 500 & 1000 & $+1.00$ & $+1.00$\\
+        \bottomrule
+      \end{tabular}\\[2pt]
+      \scriptsize ctrl, trt = CPM; $\lfc^{+1}$ usa CPM\,$+1$.\\[3pt]
+      El pseudoconteo contrae los fold changes de números minúsculos: ``no me fío de cocientes de una o dos moléculas''.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{2.5 ¿Por qué filtrar los genes poco expresados?}
+  \centering
+  \figfit[0.38]{p2_poisson}\\[-2pt]
+  \small El \alert{mismo gen medido dos veces} (sin cambio real), con cuatro niveles de expresión (solo ruido de Poisson)
+  \begin{itemize}\small\setlength\itemsep{3pt}
+    \item Los conteos bajos son \alert{puro ruido de muestreo}: con 2 frente a 4 moléculas, un ``doblaje'' es mala suerte.
+    \item Dan \alert{fold changes falsos} y \alert{más pruebas} que corregir (Parte 4).
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{$\geq$ 10 conteos en $\geq$ 12 muestras}
+  \begin{columns}[c]
+    \begin{column}{0.56\linewidth}
+      \figfit[0.6]{p2_filter}
+    \end{column}
+    \begin{column}{0.42\linewidth}\small
+      \begin{itemize}\setlength\itemsep{4pt}
+        \item 12 = el número de donantes: el tamaño de un grupo experimental (la idea de \texttt{filterByExpr} en edgeR).
+        \item Un gen que nunca llega a 10 conteos en todo un grupo no se puede analizar en ningún sitio.
+        \item Superan el filtro \alert{\numngenes\ de \numngenesraw\ genes}. Los \numngenesremoved\ eliminados acumulan el 0.011\,\% de los conteos (p.\,ej.\ receptores olfativos).
+        \item Estos números son un consejo, no una ley: puedes cambiar el umbral en el notebook y ver qué pasa.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{2.6 Mapas de calor: marcadores de tipo celular, antes y después}
+  \centering
+  \figfit[0.72]{p2_heat_markers}
+  \vspace{-0.15cm}\\
+  \scriptsize
+  \textbf{z-score por gen entre muestras:} $z_{gi}=(x_{gi}-\bar x_g)/s_g$ (rojo: por encima de la media del gen). Columnas: media de los 12 donantes. \alert{Antes}: las columnas PBS (las librerías más profundas) destacan. \alert{Después}: bloques limpios por tipo celular.
+\end{frame}
+
+\begin{frame}{2.6 Mapas de calor: genes de la respuesta inmune}
+  \begin{columns}[c]
+    \begin{column}{0.71\linewidth}
+      \figfit[0.8]{p2_heat_immune}
+    \end{column}
+    \begin{column}{0.27\linewidth}\scriptsize
+      Cuatro citoquinas, cuatro rutas:
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item \textbf{IFN-$\gamma$ / STAT1}: \gene{GBP1}, \gene{IDO1}, \gene{CXCL9}\ldots, más fuerte en monocitos
+        \item \textbf{IL-4 / STAT6}: \gene{ALOX15}, \gene{CCL17}, \gene{FCER2}, monocitos
+        \item \textbf{IL-1$\beta$ / NF-$\kappa$B}: \gene{IL6}, \gene{CXCL8}, \gene{CCL2}, monocitos
+        \item \textbf{IL-2 / STAT5}: \gene{IL2RA}, \gene{GZMB}, \gene{CISH}, NK y linfocitos T
+      \end{itemize}
+      \alert{Normalizado: biología. Crudo: profundidad de secuenciación.}\\[2pt]
+      Los z-scores son solo para visualizar.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Tu turno en el notebook (Parte 2)}
+  \small
+  Las celdas que empiezan por \code{\# CAMBIA ESTO} contienen parámetros que puedes modificar. Cámbialos, vuelve a ejecutar y mira qué pasa:
+  \vspace{0.2cm}
+
+  \begin{tabular}{@{}>{\ttfamily}p{0.27\linewidth}>{\raggedright\arraybackslash}p{0.68\linewidth}@{}}
+    \toprule
+    \textrm{\textbf{Parámetro}} & \textbf{Prueba\ldots}\\\midrule
+    sample, genes5, samples5 & otras muestras y genes en las tablas de $1\times1$ y $5\times5$: ¿qué marcador es alto en qué tipo celular?\\[2pt]
+    mask & otro tipo celular y otras citoquinas: ¿es mayor el conteo crudo con la citoquina?\\[2pt]
+    MIN\_COUNT, MIN\_SAMPLES & un filtro de genes más estricto o más laxo: ¿cuántos genes sobreviven?\\[2pt]
+    CELL\_TYPE\_MARKERS, IMMUNE\_GENES & tus propios genes en los mapas de calor antes/después\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{La Parte 2 en una diapositiva}
+  \footnotesize
+  \begin{tabular}{@{}c>{\raggedright\arraybackslash}p{0.14\linewidth}>{\raggedright\arraybackslash}p{0.33\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.17\linewidth}@{}}
+    \toprule
+    & \textbf{Paso} & \textbf{Corrige} & \textbf{Fórmula} & \textbf{Se guarda en}\\\midrule
+    1 & CPM & distintos tamaños de librería (entre muestras) & $\text{conteo}_{ij}/L_i\times10^6$ & \code{layers["cpm"]}\\[2pt]
+    2 & $\log_2(\cdot+1)$ & rango dinámico, relación media--varianza (entre genes) & $\log_2(\text{CPM}+1)$ & \code{adata.X}\\[2pt]
+    3 & filtro de genes & ruido y exceso de pruebas & $\geq10$ conteos en $\geq12$ muestras & filas de \code{adata}\\[2pt]
+    4 & z-score por gen & la línea base del gen oculta el patrón (mapas de calor) & $(x_{gi}-\bar x_g)/s_g$ & no se guarda\\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.4cm}
+  \begin{block}{Recuerda}
+    \code{layers["counts"]} = conteos crudos \quad $\to$ \quad \code{layers["cpm"]} = CPM \quad $\to$ \quad \code{adata.X} = log$_2$(CPM+1)
+  \end{block}
+\end{frame}
+
+\begin{frame}[standout]
+  Descanso\\[6pt]
+  {\Large 10 minutos}
+\end{frame}

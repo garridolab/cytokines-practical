@@ -1,0 +1,315 @@
+% ════════════════════════════════════════════════════════════════════════════════════════
+\section{Part 3: Principal Component Analysis}
+
+\begin{frame}{Part 3 roadmap: one analysis to rule them all (35 min)}
+  \footnotesize
+  \begin{columns}[T]
+    \begin{column}{0.54\linewidth}
+      \textbf{Slides} (10 min)
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item Why dimensionality reduction?
+        \item PCA as a \alert{rotation}
+        \item \alert{SVD}: how it is computed
+        \item \alert{Projection}: scores and loadings
+        \item PCA across fields
+      \end{itemize}
+      \vspace{0.1cm}
+      \textbf{Notebook} (25 min)
+      \begin{itemize}\setlength\itemsep{1pt}
+        \item 3.1 PCA by hand with 2 genes
+        \item 3.2 PCA of all the samples
+        \item 3.3 four colourings: cell type, donor, cytokine, control vs treated
+        \item 3.4 what does each PC mean? R$^2$ and loadings
+        \item 3.5 zoom in on one cell type
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.42\linewidth}
+      \begin{block}{The question}
+        Each sample is described by $\sim$15\,500 numbers (one per gene). \textbf{What drives the variation between samples?}
+      \end{block}
+      \begin{block}{The idea}
+        Find a few new axes that keep as much of the variation as possible, then \alert{colour the samples} to see what the axes mean.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Why dimensionality reduction?}
+  \begin{columns}[c]
+    \begin{column}{0.5\linewidth}
+      \begin{itemize}\setlength\itemsep{5pt}
+        \item \numnsamples\ samples $\times$ \numngenes\ genes: impossible to look at.
+        \item Many genes move \alert{together} (the same cytokine switches on a whole programme): the data are much simpler than their 15\,000 dimensions suggest.
+        \item \textbf{PCA} looks for a few \alert{combinations of genes} that summarize that shared variation:
+        \begin{itemize}\small
+          \item \alert{linear}: weighted sums of genes
+          \item \alert{ordered}: PC1 holds the most variance, PC2 the most of what is left, \ldots
+          \item \alert{unsupervised}: it knows nothing about cytokines or donors
+        \end{itemize}
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}
+      \centering
+      \begin{tikzpicture}[font=\scriptsize]
+        % a 3D-ish object and its shadow
+        \draw[thick,fill=bluemid!15] (0,0) -- (1.6,0.3) -- (2.3,1.4) -- (0.7,1.1) -- cycle;
+        \draw[thick,fill=bluemid!30] (0.7,1.1) -- (2.3,1.4) -- (2.0,2.1) -- (0.5,1.8) -- cycle;
+        \node at (1.2,-0.35) {many dimensions};
+        \draw[-{Stealth},very thick,accentred] (2.9,0.9) -- node[above] {project} (4.2,0.9);
+        \draw[thick,fill=softgrey] (4.6,0.2) rectangle (6.6,1.7);
+        \foreach \x/\y in {4.9/0.5,5.2/1.2,5.5/0.7,5.8/1.4,6.1/0.9,6.3/0.4,5.0/0.95} \fill[bluemid] (\x,\y) circle (1.5pt);
+        \node at (5.6,-0.35) {2 dimensions};
+      \end{tikzpicture}\\[4pt]
+      \footnotesize A good projection keeps the \alert{structure}: samples that are similar stay close.
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{PCA is a rotation}
+  \begin{columns}[c]
+    \begin{column}{0.52\linewidth}
+      \centering
+      \begin{tikzpicture}[font=\scriptsize]
+        \pgfmathsetseed{11}
+        % original axes
+        \draw[-{Stealth},thick,greyink!70] (-3.1,0) -- (3.3,0) node[right] {gene A};
+        \draw[-{Stealth},thick,greyink!70] (0,-2.1) -- (0,2.3) node[above] {gene B};
+        \begin{scope}[rotate=35]
+          \foreach \i in {1,...,170} {
+            \pgfmathsetmacro{\px}{(rnd+rnd+rnd-1.5)*2.0}
+            \pgfmathsetmacro{\py}{(rnd+rnd+rnd-1.5)*0.7}
+            \fill[bluemid!75] (\px,\py) circle (1.4pt);
+          }
+          \draw[-{Stealth},very thick,accentred] (-2.6,0) -- (2.8,0) node[right,font=\footnotesize\bfseries] {PC1};
+          \draw[-{Stealth},very thick,accentred] (0,-1.3) -- (0,1.4) node[above,font=\footnotesize\bfseries] {PC2};
+        \end{scope}
+      \end{tikzpicture}
+    \end{column}
+    \begin{column}{0.46\linewidth}\small
+      \begin{enumerate}\setlength\itemsep{4pt}
+        \item \textbf{Centre} every gene (subtract its mean): the origin moves to the middle of the cloud.
+        \item \textbf{Rotate} the axes until the first one points where the cloud is longest: that is \alert{PC1}. PC2 is perpendicular, and so on.
+        \item Nothing is lost: a rotation keeps all the distances between samples.
+      \end{enumerate}
+      \vspace{0.2cm}
+      \begin{block}{Dimensionality reduction}
+        \footnotesize = keep only the first few PCs and forget the rest.
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{How is it computed? The SVD}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center}]
+    \node[draw=greyink,fill=softgrey,minimum width=1.7cm,minimum height=2.3cm] (X) at (0,0) {};
+    \node at (0,0) {\Large $X_c$};
+    \node at (1.15,0) {\Large $=$};
+    \node[draw=orangeslot,fill=orangeslot!15,minimum width=1.0cm,minimum height=2.3cm] (U) at (2.2,0) {};
+    \node at (2.2,0) {\Large $U$};
+    \node[draw=greyink,fill=greyink!20,minimum width=1.0cm,minimum height=1.0cm] (S) at (3.55,0.65) {};
+    \node at (3.55,0.65) {\Large $S$};
+    \draw[greyink] (3.1,1.1) -- (4.0,0.2);
+    \node[draw=bluemid,fill=bluemid!15,minimum width=1.7cm,minimum height=1.0cm] (V) at (5.3,0.65) {};
+    \node at (5.3,0.65) {\Large $V^{\!\top}$};
+    \node[text=greyink,below=0.1cm of X] {centred data\\ samples $\times$ genes};
+    \node[text=orangeslot,below=0.1cm of U] {samples\\ $\times$ PCs};
+    \node[text=greyink,below=0.7cm of S] {strength of\\ each PC};
+    \node[text=bluemid,below=0.7cm of V] {PCs $\times$ genes\\ \alert{(loadings)}};
+  \end{tikzpicture}
+  \vspace{0.3cm}
+
+  \begin{columns}[T]
+    \begin{column}{0.5\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item $V$ is a \alert{rotation}: its columns are the new axes (unit length, perpendicular): the weights of each gene in each PC.
+        \item $S$: how much the data stretch along each axis.
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}\small
+      \begin{itemize}\setlength\itemsep{3pt}
+        \item \textbf{Variance explained} by PC $k$: $\;s_k^2\big/\sum_j s_j^2$
+        \item In Python: \code{np.linalg.svd(Xc)}; \code{scikit-learn}'s PCA does exactly this.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Projection: scores and loadings}
+  \centering
+  \figfit[0.5]{p3_twogenes}
+  \vspace{0.05cm}
+  \begin{columns}[T]
+    \begin{column}{0.5\linewidth}\small
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item Monocytes, two genes (\gene{ISG15}, \gene{MX1}).
+        \item The \alert{scores}, i.e.\ the coordinates of the samples on the new axes, are their \textbf{projection}: $T=X_c\,V=U\,S$
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.46\linewidth}\small
+      \begin{itemize}\setlength\itemsep{2pt}
+        \item Both loadings of PC1 are positive: PC1 $=$ ``overall interferon-gene level''.
+        \item PC1 alone holds \alert{98\,\%} of the variance.
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}[fragile]{PCA in practice}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center},
+      stp/.style={draw=ucoblue,fill=ucoblue!8,rounded corners,minimum height=1.15cm,minimum width=2.15cm,inner sep=2pt}]
+    \node[stp] (a) {normalized data\\ $\log_2$(CPM+1)};
+    \node[stp,right=0.3cm of a] (b) {keep the\\ \textbf{2\,000 most}\\ \textbf{variable genes}};
+    \node[stp,right=0.3cm of b] (c) {centre\\ the genes};
+    \node[stp,right=0.3cm of c] (d) {\textbf{SVD}};
+    \node[stp,right=0.3cm of d,fill=accentred!10,draw=accentred] (e) {scores, loadings,\\ variance explained};
+    \foreach \x/\y in {a/b,b/c,c/d,d/e} \draw[-{Stealth},thick] (\x) -- (\y);
+  \end{tikzpicture}
+  \vspace{0.25cm}
+
+\begin{lstlisting}
+Mc = M - M.mean(axis=0)                          # 1) centre the genes
+U, S, Vt = np.linalg.svd(Mc, full_matrices=False)   # 2) SVD
+scores   = U * S                                 # 3) projection: samples on the PCs
+loadings = Vt.T                                  #    weights of the genes
+var_pct  = S**2 / (S**2).sum() * 100             #    % of variance of each PC
+\end{lstlisting}
+  \vspace{0.1cm}
+  \small
+  Then \alert{colour the samples} by metadata to find out what each PC means.
+\end{frame}
+
+\begin{frame}{PCA across fields}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize,
+      card/.style={draw=ucoblue!50,rounded corners,fill=ucoblue!5,text width=3.95cm,inner sep=4pt,align=left,minimum height=2.15cm,anchor=north west}]
+    \node[card] at (0,0)      {\textbf{\normalsize Population genetics}\\[2pt] Genotypes of thousands of people: PC1 and PC2 redraw the map of ancestry. PCs also correct for population structure in association studies.};
+    \node[card] at (4.2,0)    {\textbf{\normalsize Single-cell RNA-seq}\\[2pt] Normalize, keep variable genes, PCA: the first 30--50 PCs feed the neighbour graph, clustering and UMAP.};
+    \node[card] at (8.4,0)    {\textbf{\normalsize Bulk RNA-seq QC}\\[2pt] Colour by batch, condition or sequencing depth: outliers, sample swaps and batch effects appear before any test.};
+    \node[card] at (0,-2.45)  {\textbf{\normalsize Other omics}\\[2pt] Proteomics, metabolomics, microbiome: hundreds of correlated features summarized in a few axes; the loadings say which features drive them.};
+    \node[card] at (4.2,-2.45) {\textbf{\normalsize Images and signals}\\[2pt] ``Eigenfaces'', compression of images or spectra: keep a few PCs and rebuild the rest.};
+    \node[card] at (8.4,-2.45) {\textbf{\normalsize Any wide table}\\[2pt] Sensors, chemistry, finance, surveys\ldots{} whenever many variables move together.};
+  \end{tikzpicture}
+  \vspace{0.1cm}
+
+  \small In all of them PCA answers the same question: \alert{what are the main sources of variation in my data?}
+\end{frame}
+
+\begin{frame}{Reading PCA: colour first, interpret second}
+  \begin{columns}[T]
+    \begin{column}{0.52\linewidth}
+      \begin{block}{How to find out what a PC means}
+        \small
+        \begin{enumerate}\setlength\itemsep{3pt}
+          \item \textbf{Colour} the samples by every piece of metadata.
+          \item Compute the \textbf{R$^2$} of each PC with each variable.
+          \item Read the \textbf{loadings}: which genes define the axis?
+        \end{enumerate}
+      \end{block}
+    \end{column}
+    \begin{column}{0.44\linewidth}
+      \begin{block}{What can go wrong}
+        \footnotesize
+        \begin{itemize}\setlength\itemsep{2pt}
+          \item PCA finds the \alert{largest} variation, not the interesting one.
+          \item Technical variables (depth, batch) can dominate: normalize first.
+          \item A PC can mix several things (a cytokine axis and a sex axis in one PC).
+          \item The sign of a PC is arbitrary. PCs are not clusters.
+          \item It is exploratory: nothing is tested.
+        \end{itemize}
+      \end{block}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{All samples: the cell type dominates}
+  \centering
+  \figfit[0.62]{p3_all_ct_donor}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \textbf{PC1} (\numpcaone\,\%): monocytes vs lymphocytes. \textbf{PC2} (\numpcatwo\,\%): NK cells vs T cells.
+    \item Inside every cell-type cluster the \alert{donors are mixed}: donor effects live on later PCs.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{All samples: cytokines and control vs treated}
+  \centering
+  \figfit[0.62]{p3_all_cyt_trt}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item The PBS controls (black) sit \alert{inside} the cloud of treated samples. A few cytokines (IL-4) start to leave it.
+    \item Cytokine effects are real but \alert{small compared with the cell-type differences}. Does that mean they do nothing?
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Which PC captures what?}
+  \centering
+  \figfit[0.52]{p3_r2}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item PC1, PC2, PC4: \alert{cell type}. PC3, PC5, PC6, PC8: \alert{donor}.
+    \item The first PC with cytokine signal is PC3 (R$^2$ 0.13): a low-variance PC. The first four PCs hold \numpcafirstfour\,\% of the variance.
+    \item PC2 correlates with library size only because NK cells have smaller libraries: cell type in disguise.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{What genes define a PC? The loadings}
+  \centering
+  \figfit[0.5]{p3_loadings}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \textbf{PC1}: monocyte vs lymphocyte genes. \textbf{PC2}: NK genes (\gene{GNLY}, \gene{NCAM1}) vs naive-T genes (\gene{CCR7}, \gene{LEF1}).
+    \item \textbf{PC3} mixes the \alert{interferon response} (\gene{IFIT1/2/3}, \gene{ISG15}) with \alert{Y-chromosome genes} (\gene{UTY}, \gene{USP9Y}): a cytokine axis and a sex axis in one PC.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Zoom in: monocytes only}
+  \centering
+  \figfit[0.62]{p3_mono_donor_cyt}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \alert{Donors} form clear groups: baseline differences between people are large. Donor 2 stands apart (as in the paper).
+    \item Cytokines do not separate yet. This is why Part 4 compares each cytokine with the PBS of the \alert{same donor}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{In the paper: donors differ before any treatment}
+  \centering
+  \includegraphics[width=0.95\linewidth,height=0.52\textheight,keepaspectratio]{paper_fig2_donors.png}\\[-1pt]
+  {\tiny Oesinghaus \emph{et al.}\ 2025, Fig.\ 2a--g (CC BY-NC-ND 4.0)}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item A group of donors (D1, D3, D4, D10) has a \alert{high baseline interferon signature} in PBS (panels d, e): the paper's ``interferon group''; Donor 2 monocytes also sit apart (Fig.\ 2k), as in our PCA.
+    \item These baseline differences are why we compare each cytokine with the PBS of the \alert{same donor}.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Monocytes: later PCs show the cytokines}
+  \centering
+  \figfit[0.64]{p3_mono_pc34}
+  \begin{itemize}\small\setlength\itemsep{2pt}
+    \item \textbf{IL-4} leaves the cloud towards low PC4, whose negative end holds IL-4 target genes (\gene{ALOX15}, \gene{WNT5B}, \gene{FN1}); \textbf{GM-CSF} goes towards high PC3.
+    \item Each cytokine moves the samples in its \alert{own direction}, mixed with donor effects.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Your turn in the notebook (Part 3)}
+  \small
+  Cells that start with \code{\# CHANGE ME} contain parameters you can modify. Change them, re-run and see what happens:
+  \vspace{0.2cm}
+
+  \begin{tabular}{@{}>{\ttfamily}p{0.25\linewidth}>{\raggedright\arraybackslash}p{0.7\linewidth}@{}}
+    \toprule
+    \textrm{\textbf{Parameter}} & \textbf{Try\ldots}\\\midrule
+    N\_HVG & $200$ and $10\,000$ genes: how robust is the picture?\\[2pt]
+    CYTOKINES\_PANEL & six interferon-family cytokines: which ones cluster together?\\[2pt]
+    PCA\_CELL\_TYPE & another cell type: does the cytokine effect look similar?\\[2pt]
+    COLOR\_BY, PCS & a gene (\gene{UTY}, \gene{STAT1}, \gene{IL1B}), the library size, other PCs (PC3 vs PC4)\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Part 3 in one slide}
+  \begin{itemize}\setlength\itemsep{7pt}
+    \item PCA is a \alert{rotation} of the data onto axes of decreasing variance, computed with the \alert{SVD}: \textbf{scores} = projection of the samples, \textbf{loadings} = weights of the genes.
+    \item It is \alert{unsupervised}: colouring by metadata, R$^2$ and loadings tell what each PC means.
+    \item \alert{Normalization} (Part 2) decides what PCA sees: without it, PC1 would be sequencing depth.
+    \item The strongest variation is the \alert{cell type}; donor effects come next; cytokine effects are real but small and \alert{mixed with donor effects}.
+    \item $\Rightarrow$ next: ask the question gene by gene, paired by donor.
+  \end{itemize}
+\end{frame}
