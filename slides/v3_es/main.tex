@@ -17,6 +17,7 @@
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage{url}
+\usepackage{qrcode}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,decorations.pathreplacing,matrix}
 \usepackage{appendixnumberbeamer}
@@ -134,32 +135,27 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Mini cuestionario: 3 preguntas, 1 minuto}
-  \small
-  Responde en el Google Form: \alert{[añade aquí el enlace o el código QR del formulario]}
-  \vspace{0.15cm}
+\begin{frame}{Mini cuestionario: 3 preguntas}
+  \begin{columns}[T]
+    \begin{column}{0.62\textwidth}
+      \large Abre \href{https://apps.garridolab.org/quiz/}{\alert{\texttt{apps.garridolab.org/quiz/}}}
+      \normalsize\vspace{0.3cm}
 
-  \begin{enumerate}\setlength\itemsep{6pt}
-    \item La muestra A tiene 5$\times$ más conteos de \emph{cada} gen que la muestra B, solo porque se secuenció a más profundidad. Tras normalizar a CPM, ¿qué esperas para un gen que no cambia?\\
-      \textbf{a)} 5$\times$ mayor en A \quad \textbf{b)} igual en A y en B \quad \textbf{c)} 5$\times$ menor en A
-    \item En el PCA de todas las muestras, ¿qué separa con más fuerza las muestras (PC1)?\\
-      \textbf{a)} la citoquina \quad \textbf{b)} el donante \quad \textbf{c)} el tipo celular \quad \textbf{d)} el tamaño de librería
-    \item ¿Por qué usamos valores $p$ ajustados (FDR) cuando analizamos $\sim$13\,000 genes?\\
-      \textbf{a)} los valores $p$ crudos se calculan mal \quad \textbf{b)} para limitar los falsos positivos que aparecen por azar al hacer muchas pruebas \quad \textbf{c)} para obtener más genes significativos
-  \end{enumerate}
+      \begin{enumerate}\setlength\itemsep{6pt}
+        \item Entra con tu \alert{correo de la UCO}. El acceso aparece cuando se abre el cuestionario (al final de la práctica).
+        \item Recibes \alert{3 preguntas aleatorias} de las partes 1--3 (Python y AnnData, normalización, PCA): una sola respuesta correcta cada una.
+        \item Solo puedes enviarlo \alert{una vez}. Verás tu nota al instante.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \centering
+      \qrcode[height=3.6cm]{https://apps.garridolab.org/quiz/}\\[4pt]
+      \scriptsize escanea con el móvil
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \appendix
-
-\begin{frame}{Solo para el profesorado: respuestas del cuestionario}
-  \small
-  \begin{enumerate}\setlength\itemsep{6pt}
-    \item \textbf{b)} El CPM divide por el tamaño de librería, así que un gen que no cambia tiene el mismo CPM en ambas muestras (Parte 2).
-    \item \textbf{c)} El tipo celular: la PC1 separa monocitos de linfocitos y la PC2 NK de linfocitos T; los efectos de las citoquinas son pequeños en comparación (Parte 3).
-    \item \textbf{b)} Con un 5\,\% de significación, $\sim$5\,\% de 13\,000 pruebas ($\approx$ 650 genes) resultan significativas por azar si no pasa nada; la corrección de Benjamini--Hochberg controla la tasa de falsos descubrimientos (Parte 4).
-  \end{enumerate}
-\end{frame}
-
 \begin{frame}{Referencias}
   \scriptsize
   \begin{itemize}\setlength\itemsep{3pt}

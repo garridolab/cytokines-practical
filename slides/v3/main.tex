@@ -15,6 +15,7 @@
 \usepackage{xcolor}
 \usepackage{listings}
 \usepackage{url}
+\usepackage{qrcode}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,decorations.pathreplacing,matrix}
 \usepackage{appendixnumberbeamer}
@@ -132,32 +133,27 @@
   \end{itemize}
 \end{frame}
 
-\begin{frame}{Quick quiz: 3 questions, 1 minute}
-  \small
-  Answer on the Google Form: \alert{[add the link or QR code of the form here]}
-  \vspace{0.15cm}
+\begin{frame}{Quick quiz: 3 questions}
+  \begin{columns}[T]
+    \begin{column}{0.62\textwidth}
+      \large Open \href{https://apps.garridolab.org/quiz/}{\alert{\texttt{apps.garridolab.org/quiz/}}}
+      \normalsize\vspace{0.3cm}
 
-  \begin{enumerate}\setlength\itemsep{6pt}
-    \item Sample A has 5$\times$ more counts of \emph{every} gene than sample B, only because it was sequenced deeper. After CPM normalization, what do you expect for a gene that does not change?\\
-      \textbf{a)} 5$\times$ higher in A \quad \textbf{b)} the same in A and B \quad \textbf{c)} 5$\times$ lower in A
-    \item In the PCA of all the samples, what separates the samples most strongly (PC1)?\\
-      \textbf{a)} the cytokine \quad \textbf{b)} the donor \quad \textbf{c)} the cell type \quad \textbf{d)} the library size
-    \item Why do we use adjusted $p$-values (FDR) when we test $\sim$13\,000 genes?\\
-      \textbf{a)} raw $p$-values are computed wrongly \quad \textbf{b)} to limit the false positives that appear by chance when many tests are done \quad \textbf{c)} to obtain more significant genes
-  \end{enumerate}
+      \begin{enumerate}\setlength\itemsep{6pt}
+        \item Log in with your \alert{UCO email}. The login appears when the quiz is opened (at the end of the practical).
+        \item You get \alert{3 random questions} about Parts 1--3 (Python and AnnData, normalization, PCA): one correct answer each.
+        \item You can submit \alert{only once}. You will see your score right away.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \centering
+      \qrcode[height=3.6cm]{https://apps.garridolab.org/quiz/}\\[4pt]
+      \scriptsize scan with your phone
+    \end{column}
+  \end{columns}
 \end{frame}
 
 \appendix
-
-\begin{frame}{Instructor only: answer key of the quiz}
-  \small
-  \begin{enumerate}\setlength\itemsep{6pt}
-    \item \textbf{b)} CPM divides by the library size, so a gene that does not change has the same CPM in both samples (Part 2).
-    \item \textbf{c)} The cell type: PC1 separates monocytes from lymphocytes and PC2 NK from T cells; cytokine effects are small by comparison (Part 3).
-    \item \textbf{b)} At 5\,\% significance, $\sim$5\,\% of 13\,000 tests ($\approx$ 650 genes) are significant by chance if nothing happens; the Benjamini--Hochberg correction controls the false discovery rate (Part 4).
-  \end{enumerate}
-\end{frame}
-
 \begin{frame}{References}
   \scriptsize
   \begin{itemize}\setlength\itemsep{3pt}
