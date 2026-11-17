@@ -63,3 +63,8 @@ slides/**/*.svg
 
 # --- Reference papers/figures (never track) ---
 refs/
+
+# --- Interactive notebook: the pre-computed DESeq2 results MUST be committed (Colab downloads them from GitHub) ---
+!cache/de_results.npz
+# smoke-test figures
+tools/_smoke_figs/

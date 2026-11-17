@@ -1,0 +1,147 @@
+% ══════════════════════════════════════════════════════════════════════════════════════════
+%  Human cytokine dictionary: Immunology practical (slides, v3 INTERACTIVE: only the introduction + the quiz QR;
+%  the rest of the practical is the interactive notebook CytokineDictionary_Practical_v3_interactive.ipynb)
+%  Build:  cd slides/v3_interactive && latexmk -xelatex main.tex
+%  (img/ holds the figures of the introduction, copied from slides/v3/img; notebook_ui_ex5.png is a screenshot of Exercise 5)
+% ══════════════════════════════════════════════════════════════════════════════════════════
+\documentclass[aspectratio=169,10pt]{beamer}
+\usetheme[progressbar=frametitle,numbering=fraction,sectionpage=progressbar]{metropolis}
+
+\usepackage{iftex}
+\ifPDFTeX\usepackage[T1]{fontenc}\usepackage[utf8]{inputenc}\fi
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{url}
+\usepackage{qrcode}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,fit,backgrounds,shapes.geometric,decorations.pathreplacing,matrix}
+\usepackage{appendixnumberbeamer}
+\graphicspath{{img/}}
+
+\ifXeTeX
+  \setsansfont[Extension=.otf,UprightFont=*-Regular,BoldFont=*-Bold,ItalicFont=*-Italic,BoldItalicFont=*-BoldItalic]{FiraSans}
+  \setmonofont[Extension=.otf,UprightFont=*-Regular,BoldFont=*-Bold,Scale=0.92]{FiraMono}
+\fi
+\input{numbers.tex}                                    % numbers of the dataset (from slides/v3/make_figures.py)
+
+% ── colours (same hues as the notebook figures) ─────────────────────────────────────────
+\definecolor{ucoblue}{HTML}{184F95}
+\definecolor{bluemid}{HTML}{2A78D6}
+\definecolor{accentred}{HTML}{E34948}
+\definecolor{greyink}{HTML}{52514E}
+\definecolor{softgrey}{HTML}{F0EFEC}
+\definecolor{orangeslot}{HTML}{EB6834}
+\definecolor{greenslot}{HTML}{1BAF7A}
+\definecolor{yellowslot}{HTML}{EDA100}
+\definecolor{magentaslot}{HTML}{E87BA4}
+\setbeamercolor{frametitle}{bg=ucoblue,fg=white}
+\setbeamercolor{progress bar}{fg=accentred,bg=ucoblue!30}
+\setbeamercolor{alerted text}{fg=accentred}
+\setbeamercolor{block title}{bg=ucoblue!85,fg=white}
+\setbeamercolor{block body}{bg=softgrey,fg=black}
+\setbeamercolor{title separator}{fg=accentred}
+\setbeamercolor{section title}{fg=ucoblue}
+\setbeamerfont{block title}{size=\small}
+\setbeamertemplate{navigation symbols}{}
+
+% ── helpers ───────────────────────────────────────────────────────────────────────────
+\newcommand{\gene}[1]{\textit{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\IFNg}{IFN-$\gamma$}
+\newcommand{\figfit}[2][0.66]{\includegraphics[width=\linewidth,height=#1\textheight,keepaspectratio]{#2}}
+\newcommand{\lfc}{\log_2\mathrm{FC}}
+\newcommand{\timebox}[1]{\hfill{\footnotesize\textcolor{greyink}{$\circ$ #1}}}
+
+\lstset{basicstyle=\ttfamily\scriptsize,keywordstyle=\color{bluemid}\bfseries,commentstyle=\color{greyink}\itshape,
+        stringstyle=\color{accentred},showstringspaces=false,frame=single,rulecolor=\color{ucoblue!40},
+        backgroundcolor=\color{softgrey},language=Python,columns=fullflexible,keepspaces=true,
+        literate={→}{{$\rightarrow$}}1}
+
+\title{Human cytokine dictionary}
+\subtitle{An interactive transcriptomics practical\\ Introduction $\cdot$ then 12 interactive exercises in the notebook}
+\author{Martin Garrido-Rodriguez}
+\institute{UCO $\cdot$ Immunology practical}
+\date{Based on Oesinghaus \emph{et al.} (2025), \emph{A single-cell cytokine dictionary of human peripheral blood}}
+
+\begin{document}
+
+\maketitle
+
+% ════════════════════════════════════════════════════════════════════════════════════════
+\begin{frame}{Plan of the practical: 2 h 30 min}
+  \centering
+  \begin{tikzpicture}[font=\scriptsize, every node/.style={align=center},
+      seg/.style={draw=white,thick,minimum height=1.3cm,text=white,font=\scriptsize\bfseries,inner sep=1pt}]
+    \def\u{0.0866}   % cm per minute, total width = 150 min = 13 cm
+    \node[seg,fill=ucoblue,       minimum width={25*\u cm}, anchor=west] at (0,0)   {Intro\\ slides};
+    \node[seg,fill=bluemid,       minimum width={12*\u cm}, anchor=west] at (25*\u,0)  {A};
+    \node[seg,fill=bluemid!80!black, minimum width={18*\u cm}, anchor=west] at (37*\u,0)  {B\\ Data};
+    \node[seg,fill=greenslot,     minimum width={18*\u cm}, anchor=west] at (55*\u,0)  {C\\ Normaliz.};
+    \node[seg,fill=greyink!60,    minimum width={10*\u cm}, anchor=west] at (73*\u,0)  {break};
+    \node[seg,fill=orangeslot,    minimum width={38*\u cm}, anchor=west] at (83*\u,0)  {D\\ Patterns \& PCA};
+    \node[seg,fill=accentred,     minimum width={22*\u cm}, anchor=west] at (121*\u,0) {E\\ Diff.\ expr.};
+    \node[seg,fill=greyink,       minimum width={7*\u cm},  anchor=west] at (143*\u,0) {quiz};
+    \foreach \t/\x in {0/0,25/25,73/73,83/83,121/121,143/143,150/150}
+      \node[below=0.12cm,text=greyink] at (\x*\u,-0.65) {\t'};
+  \end{tikzpicture}
+
+  \vspace{0.35cm}
+  \scriptsize
+  \begin{tabular}{@{}p{0.05\linewidth}p{0.30\linewidth}p{0.47\linewidth}p{0.10\linewidth}@{}}
+    \toprule
+    & \textbf{Part} & \textbf{Interactive exercises of the notebook} & \textbf{Time}\\\midrule
+    & \textbf{Introduction} (slides) & Python, Jupyter, Colab, RNA-seq, single-cell, pseudobulk, the dataset, AnnData & 25 min\\[1pt]
+    \textbf{A} & Python warm-up & 1 Variables $\cdot$ 2 Basic plots & 12 min\\[1pt]
+    \textbf{B} & Meet the data & 3 The AnnData object $\cdot$ 4 Distributions: boxplots & 18 min\\[1pt]
+    \textbf{C} & Normalization & 5 Raw counts vs CPM $\cdot$ 6 The logarithm & 18 min\\[1pt]
+    & \textit{Break} & & 10 min\\[1pt]
+    \textbf{D} & Patterns in the data & 7 Heatmaps $\cdot$ 8 PCA: the idea $\cdot$ 9 PCA: all samples $\cdot$ 10 PCA: one cell type & 38 min\\[1pt]
+    \textbf{E} & Differential expression & 11 Volcano plots $\cdot$ 12 Comparing two responses & 22 min\\[1pt]
+    & Wrap-up and quiz & & 7 min\\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\input{sec_intro.tex}
+
+% ════════════════════════════════════════════════════════════════════════════════════════
+\begin{frame}{Quick quiz: 3 questions}
+  \begin{columns}[T]
+    \begin{column}{0.62\textwidth}
+      \large Open \href{https://apps.garridolab.org/quiz/}{\alert{\texttt{apps.garridolab.org/quiz/}}}
+      \normalsize\vspace{0.3cm}
+
+      \begin{enumerate}\setlength\itemsep{6pt}
+        \item Log in with your \alert{UCO email}. The login appears when the quiz is opened (at the end of the practical).
+        \item You get \alert{3 random questions} about the practical: one correct answer each.
+        \item You can submit \alert{only once}. You will see your score right away.
+      \end{enumerate}
+    \end{column}
+    \begin{column}{0.34\textwidth}
+      \centering
+      \qrcode[height=3.6cm]{https://apps.garridolab.org/quiz/}\\[4pt]
+      \scriptsize scan with your phone
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\appendix
+\begin{frame}{References}
+  \scriptsize
+  \begin{itemize}\setlength\itemsep{3pt}
+    \item Oesinghaus L.\ \emph{et al.} (2025) A single-cell cytokine dictionary of human peripheral blood. \emph{bioRxiv}. \texttt{doi:10.64898/2025.12.12.693897}
+    \item Virshup I.\ \emph{et al.} (2024) anndata: Access and store annotated data matrices. \emph{J.\ Open Source Softw.} 9(101):4371.
+    \item Heumos L.\ \emph{et al.} (2023) Best practices for single-cell analysis across modalities. \emph{Nat.\ Rev.\ Genet.} 24:550--572.
+    \item Tzec-Interi\'an J.A., Gonz\'alez-Padilla D., G\'ongora-Castillo E.B. (2025) Bioinformatics perspectives on transcriptomics: a comprehensive review of bulk and single-cell RNA sequencing analyses. \emph{Quant.\ Biol.} e78. \texttt{doi:10.1002/qub2.78}
+    \item Squair J.W.\ \emph{et al.} (2021) Confronting false discoveries in single-cell differential expression. \emph{Nat.\ Commun.} 12:5692.
+    \item Love M.I., Huber W., Anders S. (2014) Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. \emph{Genome Biol.} 15:550.
+    \item Muzellec B.\ \emph{et al.} (2023) PyDESeq2: a python package for bulk RNA-seq differential expression analysis. \emph{Bioinformatics} 39:btad547.
+    \item Benjamini Y., Hochberg Y. (1995) Controlling the false discovery rate. \emph{J.\ R.\ Stat.\ Soc.\ B} 57:289--300.
+  \end{itemize}
+\end{frame}
+
+\end{document}
