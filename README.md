@@ -5,9 +5,7 @@ A ~2.5 h university practical on **transcriptomics data analysis** with the sing
 
 | Version | Notebook | Slides |
 |---|---|---|
-| Coding practical (EN / ES) | `CytokineDictionary_Practical_v3.ipynb`, `…_v3_es.ipynb` | `slides/v3`, `slides/v3_es` |
-| **Interactive, no-code practical (EN)** | **`CytokineDictionary_Practical_v3_interactive.ipynb`** | **`slides/v3_interactive`** (introduction + quiz QR only) |
-| **Interactive, no-code practical (ES)** | **`CytokineDictionary_Practical_v3_interactive_es.ipynb`** | **`slides/v3_interactive_es`** |
+| **Interactive, no-code practical (ES)** | [`CytokineDictionary_Practical_v3_interactive_es.ipynb`](CytokineDictionary_Practical_v3_interactive_es.ipynb) ([open in Colab](https://colab.research.google.com/github/garridolab/cytokines-practical/blob/main/CytokineDictionary_Practical_v3_interactive_es.ipynb)) | `slides/v3_interactive_es` |
 
 ## The interactive notebook
 
@@ -41,7 +39,7 @@ Then press ▶ once in every exercise.
 
 ```bash
 pip install jupyterlab ipywidgets numpy pandas scipy matplotlib anndata gdown adjustText     # pydeseq2 is only needed without the cache
-jupyter lab CytokineDictionary_Practical_v3_interactive.ipynb
+jupyter lab CytokineDictionary_Practical_v3_interactive_es.ipynb
 ```
 
 Put `pseudobulks_4ct_proteincoding.h5ad` and `cache/de_results.npz` next to the notebook (or let the Setup cell download them). Tested with ipywidgets 7.7.1 (the version of Colab) and 8.1,
